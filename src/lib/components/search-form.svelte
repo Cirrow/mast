@@ -1,21 +1,50 @@
 <script lang="ts">
-	import { Label } from "$lib/components/ui/label/index.js";
-	import * as Sidebar from "$lib/components/ui/sidebar/index.js";
-	import type { WithElementRef } from "$lib/utils.js";
-	import SearchIcon from "@lucide/svelte/icons/search";
-	import type { HTMLFormAttributes } from "svelte/elements";
+import SearchIcon from "lucide-svelte/icons/search";
 
-	let { ref = $bindable(null), ...restProps }: WithElementRef<HTMLFormAttributes> = $props();
 </script>
 
-<form bind:this={ref} {...restProps}>
-	<Sidebar.Group class="py-0">
-		<Sidebar.GroupContent class="relative">
-			<Label for="search" class="sr-only">Search</Label>
-			<Sidebar.Input id="search" placeholder="Search the docs..." class="ps-8" />
-			<SearchIcon
-				class="pointer-events-none absolute start-2 top-1/2 size-4 -translate-y-1/2 opacity-50 select-none"
-			/>
-		</Sidebar.GroupContent>
-	</Sidebar.Group>
+<form>
+    <div class="search-group">
+        <div class="search-field">
+            <label for="search" class="sr-only">Search</label>
+            <input id="search" placeholder="Search the docs..." class="search-input" />
+            <SearchIcon
+                class="search-icon"
+            />
+        </div>
+    </div>
 </form>
+
+<style>
+    .search-group {
+        padding: 0;
+    }
+    .search-field {
+        position: relative;
+    }
+    .search-input {
+        padding-left: 2rem;
+        width: 100%;
+    }
+    .search-icon {
+        pointer-events: none;
+        position: absolute;
+        left: 0.5rem;
+        top: 50%;
+        width: 1rem;
+        height: 1rem;
+        transform: translateY(-50%);
+        opacity: 0.5;
+        user-select: none;
+    }
+    .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        border: 0;
+    }
+</style>

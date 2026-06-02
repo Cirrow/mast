@@ -1,37 +1,26 @@
-<script  lang="ts">
+<script lang="ts">
 
-import * as NavigationMenu from "$lib/components/ui/navigation-menu/index.ts"
 import { authClient } from "../../utils/auth-client";
-import { isSignedIn } from "../../store";
 
 </script>
 
-<NavigationMenu.Root class="h-16 w-full fixed left-6 text-sm z-40">
-    <NavigationMenu.List>
-        <span class="mr-3"><a href="/wiki/home"><h1>The Lore Archive</h1></a></span>
-        <NavigationMenu.Item>
-            <NavigationMenu.Link href="/about" class="a-no-style ">
+<nav class="nav-bar h-16 w-full fixed left-6 text-sm z-40">
+    <ul class="flex items-center gap-6 list-none">
+        <li class="mr-3"><a href="/wiki/home"><h1>The Lore Archive</h1></a></li>
+        <li>
+            <a href="/about" class="a-no-style">
                 About
-            </NavigationMenu.Link>
-        </NavigationMenu.Item>
-        <NavigationMenu.Item>
-            <NavigationMenu.Link href="/donate" class="a-no-style ">
+            </a>
+        </li>
+        <li>
+            <a href="/donate" class="a-no-style">
                 Donate
-            </NavigationMenu.Link>
-        </NavigationMenu.Item>
-
-
-        <NavigationMenu.Item>
-            {#if !$isSignedIn}
-                <NavigationMenu.Link href="/signin" class="a-no-style ">
-                    Sign in
-                </NavigationMenu.Link>
-            {:else}
-                <NavigationMenu.Link href="/admin/account" class="a-no-style ">
-                    Account
-                </NavigationMenu.Link>
-            {/if}
-            
-        </NavigationMenu.Item>
-    </NavigationMenu.List>
-</NavigationMenu.Root>
+            </a>
+        </li>
+        <li>
+            <a href="/signin" class="a-no-style">
+                Sign in
+            </a>
+        </li>
+    </ul>
+</nav>

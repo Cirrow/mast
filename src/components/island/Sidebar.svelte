@@ -1,9 +1,7 @@
 <script lang="ts">
-import * as Collapsible from "$lib/components/ui/collapsible/index.js";
-import * as Sidebar from "$lib/components/ui/sidebar/index.js";
-import MinusIcon from "@lucide/svelte/icons/minus";
-import PlusIcon from "@lucide/svelte/icons/plus";
-import SidebarProvider from "$lib/components/ui/sidebar/sidebar-provider.svelte";
+import { Collapsible } from "bits-ui";
+import MinusIcon from "lucide-svelte/icons/minus";
+import PlusIcon from "lucide-svelte/icons/plus";
 
 
 const { routes = [], currentSlug = "", ...restProps } = $props<{
@@ -100,89 +98,100 @@ function isOpen(slug: string) {
 </script>
 
 
-{#snippet renderTopLevel(node: Node)}
-    {#if node.type === "directory"}
-        <Collapsible.Root open={isOpen(node.slug)} class="group/collapsible">
-            <Sidebar.MenuItem>
-
-                <Collapsible.Trigger>
-                    {#snippet child({ props })}
-                        <Sidebar.MenuButton {...props}>
-                            {node.name}
-                            <PlusIcon class="ms-auto group-data-[state=open]/collapsible:hidden" />
-                            <MinusIcon class="ms-auto group-data-[state=closed]/collapsible:hidden" />
-                        </Sidebar.MenuButton>
-                    {/snippet}
-                </Collapsible.Trigger>
-
-                <Collapsible.Content>
-                    <Sidebar.MenuSub>
-                        {#each node.children as child (child.slug)}
-                            {#if child.type === "directory"}
-                                <Collapsible.Root open={isOpen(child.slug)} class="group/collapsible">
-                                    <Sidebar.MenuSubItem>
-                                        <Collapsible.Trigger>
-                                            {#snippet child({ props })}
-                                                    <Sidebar.MenuSubButton {...props}>
-                                                    {child.name}
-                                                    <PlusIcon class="ms-auto group-data-[state=open]/collapsible:hidden" />
-                                                    <MinusIcon class="ms-auto group-data-[state=closed]/collapsible:hidden" />
-                                                    </Sidebar.MenuSubButton>
-                                            {/snippet}
-                                        </Collapsible.Trigger>
-
-                                        <Collapsible.Content>
-                                            <Sidebar.MenuSub>
-                                                {#each child.children as grandchild (grandchild.slug)}
-                                                    <Sidebar.MenuSubItem>
-                                                        <Sidebar.MenuSubButton isActive={grandchild.slug === currentSlug}>
-                                                            {#snippet child({ props })}
-                                                                <a href={"/wiki/" + grandchild.slug} {...props}>{grandchild.name}</a>
-                                                            {/snippet}
-                                                        </Sidebar.MenuSubButton>
-                                                    </Sidebar.MenuSubItem>
-                                                {/each}
-
-                                            </Sidebar.MenuSub>
-                                        </Collapsible.Content>
-                                    </Sidebar.MenuSubItem>
-                                </Collapsible.Root>
-                            {:else}
-                                <Sidebar.MenuSubItem>
-                                    <Sidebar.MenuSubButton isActive={child.slug === currentSlug}>
-                                        {#snippet child({ props })}
-                                            <a href={"/wiki/" + child.slug} {...props}>{child.name}</a>
-                                        {/snippet}
-                                    </Sidebar.MenuSubButton>
-                                </Sidebar.MenuSubItem>
-                            {/if}
-                        {/each}
-                    </Sidebar.MenuSub>
-                </Collapsible.Content>
-            </Sidebar.MenuItem>
-        </Collapsible.Root>
-    {:else}
-        <Sidebar.MenuItem>
-            <Sidebar.MenuButton isActive={node.slug === currentSlug}>
-                {#snippet child({ props })}
-                    <a href={"/wiki/" + node.slug} {...props}>{node.name}</a>
-                {/snippet}
-            </Sidebar.MenuButton>
-        </Sidebar.MenuItem>
-    {/if}
-{/snippet}
+<aside class="sidebar-nav">
+    <nav>
+        {#each tree as node (node.slug)}
+            {#if node.type === "directory"}
+                <Collapsible.Root open={isOpen(node.slug)} class="group/collapsible">
+                    <Collapsible.Trigger class="sidebar-trigger">
+                        {node.name}
+                        <PlusIcon class="ms-auto group-data-[state=open]/collapsible:hidden" />
+                        <MinusIcon class="ms-auto group-data-[state=closed]/collapsible:hidden" />
+                    </Collapsible.Trigger>
+                    <Collapsible.Content>
+                        <ul class="sidebar-sub">
+                            {#each node.children as child (child.slug)}
+                                {#if child.type === "directory"}
+                                    <li>
+                                        <Collapsible.Root open={isOpen(child.slug)} class="group/collapsible">
+                                            <Collapsible.Trigger class="sidebar-trigger sidebar-sub-trigger">
+                                                {child.name}
+                                                <PlusIcon class="ms-auto group-data-[state=open]/collapsible:hidden" />
+                                                <MinusIcon class="ms-auto group-data-[state=closed]/collapsible:hidden" />
+                                            </Collapsible.Trigger>
+                                            <Collapsible.Content>
+                                                <ul class="sidebar-sub">
+                                                    {#each child.children as grandchild (grandchild.slug)}
+                                                        <li>
+                                                            <a href={"/wiki/" + grandchild.slug} class="sidebar-link" class:active={grandchild.slug === currentSlug}>{grandchild.name}</a>
+                                                        </li>
+                                                    {/each}
+                                                </ul>
+                                            </Collapsible.Content>
+                                        </Collapsible.Root>
+                                    </li>
+                                {:else}
+                                    <li>
+                                        <a href={"/wiki/" + child.slug} class="sidebar-link" class:active={child.slug === currentSlug}>{child.name}</a>
+                                    </li>
+                                {/if}
+                            {/each}
+                        </ul>
+                    </Collapsible.Content>
+                </Collapsible.Root>
+            {:else}
+                <a href={"/wiki/" + node.slug} class="sidebar-link" class:active={node.slug === currentSlug}>{node.name}</a>
+            {/if}
+        {/each}
+    </nav>
+</aside>
 
 
-<SidebarProvider>
- <Sidebar.Root {...restProps}>
-<Sidebar.Content>
-    <Sidebar.Group>
-        <Sidebar.Menu>
-            {#each tree as node (node.slug)}
-                {@render renderTopLevel(node)}
-            {/each}
-        </Sidebar.Menu>
-    </Sidebar.Group>
-</Sidebar.Content>
-</Sidebar.Root>
-</SidebarProvider>
+<style>
+    .sidebar-nav {
+        padding: 0.5rem 0;
+    }
+    .sidebar-nav nav {
+        display: flex;
+        flex-direction: column;
+        gap: 0.125rem;
+    }
+    .sidebar-trigger {
+        display: flex;
+        align-items: center;
+        width: 100%;
+        padding: 0.5rem 0.75rem;
+        font-size: 0.875rem;
+        cursor: pointer;
+        border: none;
+        background: none;
+        text-align: left;
+        border-radius: 0.375rem;
+    }
+    .sidebar-trigger:hover {
+        background: var(--color-muted, #f5f5f5);
+    }
+    .sidebar-sub-trigger {
+        padding-left: 1.5rem;
+    }
+    .sidebar-sub {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+    }
+    .sidebar-link {
+        display: block;
+        padding: 0.375rem 0.75rem;
+        font-size: 0.875rem;
+        text-decoration: none;
+        color: inherit;
+        border-radius: 0.375rem;
+    }
+    .sidebar-link:hover {
+        background: var(--color-muted, #f5f5f5);
+    }
+    .sidebar-link.active {
+        background: var(--color-primary, #000);
+        color: var(--color-primary-foreground, #fff);
+    }
+</style>
