@@ -25,7 +25,8 @@
         
         "paths": {
             "$lib": ["./src/lib"],
-            "$lib/*": ["./src/lib/*"]
+            "$lib/*": ["./src/lib/*"],
+            "#config": ["./src/config.ts"]
         },
         
     }
