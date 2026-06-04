@@ -1,27 +1,22 @@
 import { betterAuth } from "better-auth"
-import { Pool } from "pg"
+import Database from "better-sqlite3"
+import { NodeSqliteDialect } from "@better-auth/kysely-adapter/node-sqlite-dialect"
 import * as dotenv from "dotenv"
 
 dotenv.config()
 
-const pool = new Pool({
-    connectionString: import.meta.env.DATABASE_URL,
-    ssl: {
-        rejectUnauthorized: true
-    }
-})
+const db = new Database("./data/auth.db")
 
 export const auth = betterAuth({
-    database: pool,
+    database: new NodeSqliteDialect({ database: db }),
     socialProviders: {
         github: {
             clientId: import.meta.env.OAUTH_GITHUB_CLIENT_ID,
             clientSecret: import.meta.env.OAUTH_GITHUB_CLIENT_SECRET,
             scope: ["user:email"]
-        }
+        },
     },
     advanced: {
         useSecureCookies: true
     }
 })
-

@@ -1,5 +1,6 @@
 ---
-import { getPage, verifySession } from "../../../utils/octo";
+import { getSinglePage } from "../../../utils/git-service";
+import { auth } from "../../../utils/auth";
 import Editor from "../../../components/island/Editor.svelte";
 
 import '../../../styles/global.css'
@@ -21,11 +22,26 @@ let pageData: { content: string; sha: string, last: Last } | null = null;
 let error: string | null = null;
  
 try {
-    await verifySession(Astro.request);
-    pageData = await getPage(path);
+    const session = await auth.api.getSession({ headers: Astro.request.headers })
+    if (!session) throw new Error("Unauthorized")
+
+    const contentDir = process.env.CONTENT_DIR!
+    const slug = path.replace(/^wiki\//, "").replace(/\.txt$/, "").split("/");
+    const rawPage = await getSinglePage(contentDir, slug)
+
+    if (!rawPage) throw new Error("Page not found")
+
+    pageData =  {
+        content: rawPage.content,
+        sha: rawPage.lastModified.getTime().toString(),
+        last: {
+            updated: rawPage.lastModified.toString(),
+            committer: "",
+            commitSha: rawPage.lastModified.getTime().toString()
+        }
+    }
 
 } catch (e: any) {
-
     if (e?.message === "Unauthorized") {
         return Astro.redirect("/signin");
     }

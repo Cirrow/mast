@@ -43,10 +43,9 @@ const lastModifiedDate = page.metadata.lastModified.toLocaleString('en-GB', {
     timeZone: 'UTC',
 }) + ' UTC'
 
-
-const pageURL = `https://github.com/lorearchive/law-content/tree/main/wiki/${page.slug.join("/")}.txt`
-const pageEditURL = `/admin/edit/wiki/${page.slug.join("/")}.txt`
-const historyURL = `https://github.com/lorearchive/law-content/commits/main/wiki/${page.slug.join("/")}.txt`
+const pageURL = `#`
+const pageEditURL = `/admin/edit/${page.slug.join("/")}.txt`
+const historyURL = `#`
 
 const isHomePage = Astro.url.pathname.endsWith('/home') || Astro.url.pathname.endsWith("/home/");
 ---

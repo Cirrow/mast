@@ -156,24 +156,6 @@ function isOpen(slug: string) {
         flex-direction: column;
         gap: 0.125rem;
     }
-    .sidebar-trigger {
-        display: flex;
-        align-items: center;
-        width: 100%;
-        padding: 0.5rem 0.75rem;
-        font-size: 0.875rem;
-        cursor: pointer;
-        border: none;
-        background: none;
-        text-align: left;
-        border-radius: 0.375rem;
-    }
-    .sidebar-trigger:hover {
-        background: var(--color-muted, #f5f5f5);
-    }
-    .sidebar-sub-trigger {
-        padding-left: 1.5rem;
-    }
     .sidebar-sub {
         list-style: none;
         margin: 0;

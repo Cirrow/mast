@@ -102,57 +102,15 @@ function executeGitCommand(command: string, timeout: number): void {
 
 export async function fetchWikiContent( config: Partial<ContentFetchConfig> = {} ): Promise<string> {
     const finalConfig = { ...defaultConfig, ...config };
-  
-    // validate config
-    if (!finalConfig.repoUrl || !finalConfig.branch) {
-        throw new GitServiceError('LORA: Repository URL and branch are required');
+    const contentPath = process.env.CONTENT_DIR || path.join(finalConfig.localPath, finalConfig.wikiContentPath);
+    
+    if (!(await directoryExists(contentPath))) {
+        console.warn(`LORA: Content directory '${contentPath}' not found. Creating...`);
+        await fs.mkdir(contentPath, { recursive: true });
     }
-
-    // Sanitize paths
-    const localPath = sanitizePath(finalConfig.localPath);
-    const wikiContentPath = sanitizePath(finalConfig.wikiContentPath);
-
-    try {
-        const repoExists = await directoryExists(localPath);
     
-        if (repoExists) {
-            // Verify it's actually a git repository
-            const gitDirExists = await directoryExists(path.join(localPath, '.git'));
-            if (!gitDirExists) {
-                console.log(`LORA: Directory '${localPath}' exists but is not a git repository. Removing and cloning fresh...`);
-                // Remove the directory and clone fresh
-                await fs.rm(localPath, { recursive: true, force: true });
-                console.log('LORA: Cloning wiki content repository...')
-                executeGitCommand( `git clone --depth 1 --single-branch --branch ${finalConfig.branch} "${finalConfig.repoUrl}" "${localPath}"`, finalConfig.gitTimeout );
-            } else {
-                console.log('LORA: Updating existing wiki content repository...');
-                // Reset local changes and pull latest
-                executeGitCommand( `cd "${localPath}" && git reset --hard HEAD && git pull origin ${finalConfig.branch}`, finalConfig.gitTimeout );
-            }
-        } else {
-            console.log('LORA: Cloning wiki content repository...')
-            executeGitCommand( `git clone --depth 1 --single-branch --branch ${finalConfig.branch} "${finalConfig.repoUrl}" "${localPath}"`, finalConfig.gitTimeout );
-        }
-
-        const contentFullPath = path.join(localPath, wikiContentPath)
-    
-        if (!(await directoryExists(contentFullPath))) {
-            throw new ContentValidationError(
-                `LORA: Wiki content directory '${wikiContentPath}' not found in repository`
-            )
-        }
-
-        console.log(`LORA: Wiki content successfully fetched to: ${contentFullPath}`);
-        return contentFullPath;
-    
-    } catch (e) {
-        if (e instanceof GitServiceError) {
-            throw e
-        }
-    
-        console.error('LORA: Error fetching wiki content:', e);
-        throw new GitServiceError('LORA: Failed to fetch wiki content', e as Error);
-    }
+    console.log(`LORA: Using wiki content from: ${contentPath}`);
+    return contentPath;
 }
 
 // validate file size and content 
@@ -199,7 +157,7 @@ async function getLastCommitDate(filePath: string, repoPath: string): Promise<Da
         
         const result = execSync(command, {
             stdio: 'pipe',
-            timeout: 5000, // 5 second timeout for individual git log commands
+            timeout: 5000,
             encoding: 'utf8',
         });
         
@@ -216,7 +174,7 @@ async function getLastCommitDate(filePath: string, repoPath: string): Promise<Da
         return commitDate;
     } catch (e) {
         console.warn(`LORA: Error getting git commit date for ${filePath}:`, e);
-        // Fall back to file modification time
+        // fall back to file modification time
         try {
             const stats = await fs.stat(filePath);
             console.log(`LORA: [DEBUG] Fallback to file mtime for ${filePath}: ${stats.mtime.toISOString()}`);
@@ -229,7 +187,6 @@ async function getLastCommitDate(filePath: string, repoPath: string): Promise<Da
     }
 }
 
-// Ensure metadata directory exists
 async function checkMetaDir( wikiPath: string ): Promise<string> {
     const metaDir = path.join(wikiPath, 'meta');
     
@@ -243,7 +200,6 @@ async function checkMetaDir( wikiPath: string ): Promise<string> {
     return metaDir;
 }
 
-// Save metadata for a single page
 async function savePageMetadata(metaDir: string, metadata: PageMeta): Promise<void> {
     const fileName = metadata.id + '.json';
     const filePath = path.join(metaDir, fileName);
@@ -298,18 +254,14 @@ export async function getAllPages( contentPath: string, config: Partial<Pick<Con
                 } else if (entry.isFile() && entry.name.endsWith('.txt')) {
             
                     try {
-                        // Validate file before processing
                         await validateWikiFile(entryPath, finalConfig.maxFileSize);
               
-                        // Process wiki file
                         const pageName = entry.name.replace(/\.txt$/, '');
                         const slug = generateSlug([...parentSlug, pageName]);
               
-                        // Read file content and get stats
                         const content = await fs.readFile(entryPath, 'utf-8');
                         const stats = await fs.stat(entryPath);
                         
-                        // Get last commit date (falls back to file mtime if git fails)
                         const lastModified = gitDirExists 
                             ? await getLastCommitDate(entryPath, repoPath)
                             : stats.mtime;
@@ -317,7 +269,6 @@ export async function getAllPages( contentPath: string, config: Partial<Pick<Con
                        const slugPath = slug.join("/");
                         global.lastMod[slugPath] = lastModified;
 
-                        // Extract title (first line or filename)
                         const title = content.split('\n')[0].replace(/^#+\s*/, '') || pageName;
 
                         const pageData = { 
@@ -328,7 +279,6 @@ export async function getAllPages( contentPath: string, config: Partial<Pick<Con
                             size: stats.size
                         };
 
-                        // Save metadata
                         const metadata: PageMeta = {
                             id: pageName,
                             title: title.trim().slice(6).slice(0, -6).trim(),
@@ -415,3 +365,31 @@ export async function cleanupLocalRepo( config: Partial<ContentFetchConfig> = {}
     }
 }
 
+export async function savePage( 
+    filePath: string,
+    content: string,
+    authorName: string,
+    authorEmail: string
+): Promise<string> {
+
+    const fullPath = path.resolve(filePath)
+    await fs.writeFile(fullPath, content, 'utf-8')
+
+    const repoDir = path.dirname(fullPath)
+
+    let gitRoot = repoDir
+    while (gitRoot !== '/' && !(await directoryExists(path.join(gitRoot, ".git")))) {
+        gitRoot = path.dirname(gitRoot)
+    }
+
+    const relativePath = path.relative(gitRoot, fullPath)
+
+    execSync(`git add "${relativePath}"`, { cwd: gitRoot, stdio: 'pipe', timeout: 10000 });
+    execSync(
+        `git commit -m "${authorName} edited ${relativePath}" --author="${authorName} <${authorEmail}>"`,
+        { cwd: gitRoot, stdio: 'pipe', timeout: 10000 }
+    );
+
+    const sha = execSync(`git log -1 --format="%H"`, { cwd: gitRoot, stdio: 'pipe', timeout: 5000, encoding: 'utf8' }).trim();
+    return sha
+}

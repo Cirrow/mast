@@ -9,9 +9,9 @@
     "astro": "astro"
   },
   "dependencies": {
+    "@astrojs/node": "^10.1.2",
     "@astrojs/sitemap": "3.7.1",
     "@astrojs/svelte": "^8.1.0",
-    "@astrojs/vercel": "^10.0.6",
     "@codemirror/commands": "^6.10.3",
     "@codemirror/language": "^6.12.3",
     "@codemirror/lint": "^6.9.6",
@@ -19,15 +19,14 @@
     "@codemirror/state": "^6.6.0",
     "@codemirror/view": "^6.42.1",
     "@floating-ui/dom": "^1.7.6",
-    "@octokit/auth-app": "^8.2.0",
     "@tailwindcss/vite": "^4.3.0",
     "astro": "^6.3.1",
     "better-auth": "^1.6.10",
+    "better-sqlite3": "^12.10.0",
     "cloudflare": "^5.2.0",
     "dotenv": "^17.4.2",
+    "kysely": "^0.28.17",
     "lucide-svelte": "^1.0.1",
-    "octokit": "^5.0.5",
-    "pg": "^8.20.0",
     "svelte": "^5.55.5",
     "tailwindcss": "^4.3.0",
     "typescript": "^5.9.3"
@@ -39,7 +38,7 @@
     "@types/node": "latest",
     "@types/pg": "^8.20.0",
     "bits-ui": "^2.18.1",
-    "vite-plugin-top-level-await": "^1.6.0",
+    "vite-plugin-top-level-await": "^1.2.2",
     "vite-plugin-wasm": "^3.6.0"
   }
 }

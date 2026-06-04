@@ -6,9 +6,7 @@ import { fetchWikiContent, getAllPages } from './src/utils/git-service'
 
 import svelte from '@astrojs/svelte';
 
-
-import vercel from '@astrojs/vercel';
-
+import node from '@astrojs/node'
 
 import tailwindcss from '@tailwindcss/vite';
 
@@ -70,7 +68,9 @@ export default defineConfig({
     domains: ["avatars.githubusercontent.com"]
   },
 
-  adapter: vercel(),
+  adapter: node({
+    mode: 'standalone',
+  }),
 
   vite: {
     plugins: [tailwindcss()],
