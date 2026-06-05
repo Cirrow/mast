@@ -1,4 +1,28 @@
+# ----- WIKI SETUP -----
+
 [basic]
 name = "Mast Wiki Engine"
-image_as_home = false
+# default_page = 
+# favicon =
 
+image_as_home = false
+#image_path
+pinned_pages = [""]
+
+
+
+[auth]
+allow_signup = true
+# auth_methods = ["github", "gitlab", "google", "email", "facebook"]
+
+
+[storage]
+type = "local_git"
+
+
+
+
+# ----- WIKI CUSTOMISATION -----
+[typography]
+
+[colour]

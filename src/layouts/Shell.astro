@@ -1,6 +1,7 @@
 ---
 const { title, routes, aside = true, toc = true } = Astro.props
 
+import config from "#config"
 
 import Header from "../components/island/Header.svelte"
 import '../styles/global.css'
@@ -35,7 +36,7 @@ import Sidebar from "../components/island/Sidebar.svelte"
 
             <div class="main-content">
                 <div id="shell-header">
-                    <Header client:load transition:persist />
+                    <Header name={config.basic.name} client:load transition:persist />
                 </div>
                 
 

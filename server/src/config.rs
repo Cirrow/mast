@@ -1,0 +1,47 @@
+use dotenvy::dotenv;
+use serde::Deserialize;
+use std::path::PathBuf;
+
+#[derive(Debug, Deserialize)]
+pub struct Config {
+    pub basic: Basic,
+    pub auth: Auth,
+    pub storage: Storage,
+    #[serde(skip)]
+    pub content_dir: PathBuf
+}
+
+#[derive(Debug, Deserialize)]
+pub struct Basic {
+    pub name: String,
+    pub image_as_home: bool,
+    pub image_path: Option<String>,
+    pub pinned_pages: Vec<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct Auth {
+    pub allow_signup: bool,
+}
+#[derive(Debug, Deserialize)]
+pub struct Storage {
+    #[serde(rename = "type")]
+    pub storage_type: String,
+}
+
+
+impl Config {
+    pub fn load() -> Self {
+        dotenv().ok();
+
+        let content: String = std::fs::read_to_string("../mast-config.toml")
+            .expect("mast-config.toml not found");
+        let mut config: Config = toml::from_str(&content)
+            .expect("Failed to parse mast config");
+        
+        config.content_dir = std::env::var("CONTENT_DIR")
+            .map(PathBuf::from)
+            .unwrap_or_else(|_| PathBuf::from("../.wiki/wiki"));
+        config
+    }
+}

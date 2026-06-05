@@ -1,11 +1,8 @@
 ---
 import Shell from "../layouts/Shell.astro"
-import { auth } from "../utils/auth"
 import SigninButton from "../components/SigninButton.svelte"
 
 
-const session = await auth.api.getSession({ headers: Astro.request.headers })
-if (session) return Astro.redirect("/wiki/home")
 ---
 
 <head>

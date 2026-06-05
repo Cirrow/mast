@@ -1,7 +1,7 @@
 ---
-export const prerender = true
+export const prerender = process.env.NODE_ENV === 'production'
 // get the pre processed data from props
-const { page, routes } = Astro.props;
+let { page, routes } = Astro.props;
 
 import { fetchWikiContent, getAllPages } from '../../utils/git-service'
 import { processAllPages } from '../../utils/pages-processor'
@@ -27,6 +27,17 @@ export async function getStaticPaths() {
     })
 
     return routes  
+}
+
+if (!page) {
+    const contentDir = ".wiki/wiki"
+    const rawPages = await getAllPages(contentDir)
+    const processed = (await processAllPages(rawPages)).processedPages
+    routes = processed.map(p => p.filePath)
+    if (Astro.params.slug) {
+        page = processed.find(p => p.slug.join("/") === Astro.params.slug)
+    }
+    if (!page) return Astro.redirect("/wiki/home")
 }
 
 const h1Match = page.htmlContent.match(/<h1[^>]*>.*?<\/h1>/i)

@@ -9,29 +9,21 @@
         indentWithTab,
     } from "@codemirror/commands";
 
-    interface Props {
-        path: string;
-        initialContent: string;
-        sha: string;
-        last: {
-            updated: string
-            committer: string
-            commitSha: string
-        }
-    }
-
-    let { path, initialContent, sha, last }: Props = $props();
+    let path = $state("");
+    let initialContent = $state("");
+    let currentSha = $state("");
+    let last = $state({ updated: "", committer: "", commitSha: "" });
 
     let editorElement: HTMLDivElement | undefined = $state();
     let view: EditorView | undefined = $state();
-    let currentSha = $state(untrack(() => sha));
+    let loading = $state(true);
+    let loadError = $state("");
 
-    // Editor status
     type SaveState = "idle" | "saving" | "saved" | "conflict" | "error";
     let saveState: SaveState = $state<SaveState>("idle");
     let saveMsg = $state("");
     let dirty = $state(false);
-    let lineCount = $state(untrack(() => initialContent.split("\n").length));
+    let lineCount = $state(1);
     let cursorLine = $state(1);
     let cursorCol = $state(1);
 
@@ -118,7 +110,7 @@
             dirty = false;
             saveState = "saved";
             saveMsg = "saved";
-``
+
             setTimeout(() => {
                 if (saveState === "saved") saveState = "idle";
             }, 2500);
@@ -128,42 +120,81 @@
         }
     }
 
-    onMount(() => {
-        if (!editorElement) return;
+    onMount(async () => {
+        const params = new URLSearchParams(window.location.search);
+        const pagePath = params.get("path");
 
-        const saveKeymap = keymap.of([
-        {
-            key: "Mod-s",
-            preventDefault: true,
-            run: () => { save(); return true; },
-        },
-        ]);
+        if (!pagePath) {
+            loadError = "no path specified";
+            loading = false;
+            return;
+        }
 
-        const state = EditorState.create({
-            doc: initialContent,
-            extensions: [
-                history(),
-                drawSelection(),
-                highlightActiveLine(),
-                keymap.of([...defaultKeymap, ...historyKeymap, indentWithTab]),
-                saveKeymap,
-                theme,
-                EditorView.lineWrapping,
-                EditorView.updateListener.of((update) => {
-                    if (update.docChanged) {
-                        dirty = true;
-                        if (saveState === "saved") saveState = "idle";
-                    }
-                    if (update.selectionSet || update.docChanged) {
-                        updateCursor(update.state);
-                    }
-                }),
-            ],
-        });
+        path = pagePath;
 
-        view = new EditorView({ state, parent: editorElement });
-        view.focus();
-        updateCursor(state);
+        const pathEl = document.getElementById("header-path");
+        if (pathEl) pathEl.textContent = pagePath;
+
+        try {
+            const res = await fetch(`/api/pages/${pagePath}`);
+
+            if (res.status === 401) {
+                window.location.href = "/signin";
+                return;
+            }
+
+            if (!res.ok) {
+                loadError = `failed to load page (${res.status})`;
+                loading = false;
+                return;
+            }
+
+            const data = await res.json();
+            initialContent = data.content;
+            currentSha = data.sha ?? "";
+            last = data.last ?? { updated: "", committer: "", commitSha: "" };
+
+            loading = false;
+
+            if (!editorElement) return;
+
+            const saveKeymap = keymap.of([
+            {
+                key: "Mod-s",
+                preventDefault: true,
+                run: () => { save(); return true; },
+            },
+            ]);
+
+            const state = EditorState.create({
+                doc: initialContent,
+                extensions: [
+                    history(),
+                    drawSelection(),
+                    highlightActiveLine(),
+                    keymap.of([...defaultKeymap, ...historyKeymap, indentWithTab]),
+                    saveKeymap,
+                    theme,
+                    EditorView.lineWrapping,
+                    EditorView.updateListener.of((update) => {
+                        if (update.docChanged) {
+                            dirty = true;
+                            if (saveState === "saved") saveState = "idle";
+                        }
+                        if (update.selectionSet || update.docChanged) {
+                            updateCursor(update.state);
+                        }
+                    }),
+                ],
+            });
+
+            view = new EditorView({ state, parent: editorElement });
+            view.focus();
+            updateCursor(state);
+        } catch (e: any) {
+            loadError = e?.message ?? "network error";
+            loading = false;
+        }
     });
 
     onDestroy(() => {
@@ -187,37 +218,46 @@
         : dirty ? "unsaved"
         : ""
     );
-
-    console.log(path)
 </script>
 
-<div class="editor-root">
-  <div class="cm-host" bind:this={editorElement}></div>
+{#if loading}
+  <div class="loading-state">
+    <span>loading…</span>
+  </div>
+{:else if loadError}
+  <div class="error-state">
+    <p>could not load page</p>
+    <code>{loadError}</code>
+  </div>
+{:else}
+  <div class="editor-root">
+    <div class="cm-host" bind:this={editorElement}></div>
 
-  <footer>
-    <div class="footer-left">
-      <span class="lastMod-label"><a href={"https://github.com/lorearchive/law-content/commits/main/" + path} class="a-no-style">Last modified on {new Date(last.updated).toLocaleDateString()} by {last.committer} @ {last.commitSha.slice(0, 7)}</a></span>
-    </div>
-    <div class="footer-right">
-      {#if statusLabel}
-        <span class="status-msg" style:color={statusColor}>{statusLabel}</span>
-      {/if}
-      <span class="cursor-pos">
-        {cursorLine}:{cursorCol}
-      </span>
-      <span class="line-count">{lineCount}L</span>
-      <button
-        class="save-btn"
-        class:saving={saveState === "saving"}
-        onclick={save}
-        disabled={saveState === "saving"}
-        title="Save (⌘S / Ctrl+S)"
-      >
-        {saveState === "saving" ? "saving…" : "save"}
-      </button>
-    </div>
-  </footer>
-</div>
+    <footer>
+      <div class="footer-left">
+        <span class="lastMod-label"><a href={"https://github.com/lorearchive/law-content/commits/main/" + path} class="a-no-style">Last modified on {last.updated ? new Date(last.updated).toLocaleDateString() : "?"} by {last.committer || "?"} @ {(last.commitSha || "").slice(0, 7) || "?"}</a></span>
+      </div>
+      <div class="footer-right">
+        {#if statusLabel}
+          <span class="status-msg" style:color={statusColor}>{statusLabel}</span>
+        {/if}
+        <span class="cursor-pos">
+          {cursorLine}:{cursorCol}
+        </span>
+        <span class="line-count">{lineCount}L</span>
+        <button
+          class="save-btn"
+          class:saving={saveState === "saving"}
+          onclick={save}
+          disabled={saveState === "saving"}
+          title="Save (⌘S / Ctrl+S)"
+        >
+          {saveState === "saving" ? "saving…" : "save"}
+        </button>
+      </div>
+    </footer>
+  </div>
+{/if}
 
 <style>
   .editor-root {
@@ -234,6 +274,26 @@
 
   :global(.cm-host .cm-editor) {
     height: 100%;
+  }
+
+  .loading-state, .error-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+    gap: 12px;
+    color: var(--text-secondary);
+    font-family: var(--font-ui);
+  }
+
+  .error-state code {
+    font-family: var(--font-code);
+    font-size: 12px;
+    color: var(--danger);
+    background: rgba(192, 80, 74, 0.1);
+    padding: 4px 10px;
+    border-radius: 4px;
   }
 
   footer {

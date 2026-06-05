@@ -1,18 +1,5 @@
 ---
 import Shell from "../../layouts/Shell.astro"
-import { auth } from "../../utils/auth"
-
-const session = await auth.api.getSession({ headers: Astro.request.headers })
-if (!session) return Astro.redirect("/signin")
-
-const user = session.user
-
-const currentHour = new Date().getHours()
-let greetingMessage = ""
-if (currentHour < 12) { greetingMessage = `Good morning, ${user.name}` }
-else if (currentHour < 17) { greetingMessage = `Good afternoon, ${user.name}` }
-else if (currentHour < 21) { greetingMessage = `Good evening, ${user.name}` }
-else { greetingMessage = `Good night, ${user.name}` }
 ---
 
 <Shell title="Account - Lore Archive" aside={true} toc={false}>

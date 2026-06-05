@@ -38,6 +38,7 @@ data/
 /rust-wasm/target/
 
 # Rust cargo lock file
-rust-wasm/Cargo.lock
+server/target/
+server/Cargo.lock
 
 .vercel

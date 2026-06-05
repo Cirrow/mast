@@ -6,7 +6,8 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "astro": "astro"
+    "astro": "astro",
+    "server": "concurrently \"astro dev\" \"cd server && cargo run\""
   },
   "dependencies": {
     "@astrojs/node": "^10.1.2",
@@ -41,6 +42,8 @@
     "@types/node": "latest",
     "@types/pg": "^8.20.0",
     "bits-ui": "^2.18.1",
+    "chokidar-cli": "^3.0.0",
+    "concurrently": "^10.0.3",
     "vite-plugin-top-level-await": "^1.2.2",
     "vite-plugin-wasm": "^3.6.0"
   },

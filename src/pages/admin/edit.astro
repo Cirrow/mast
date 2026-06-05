@@ -1,53 +1,5 @@
 ---
-import { getSinglePage } from "../../../utils/git-service";
-import { auth } from "../../../utils/auth";
-import Editor from "../../../components/island/Editor.svelte";
-
-import '../../../styles/global.css'
-import '../../../styles/typography.css'
- 
-const { path } = Astro.params;
-
-export interface Last {
-    updated: string,
-    committer: string,
-    commitSha: string
-}
- 
-if (!path) {
-  return Astro.redirect("/");
-}
- 
-let pageData: { content: string; sha: string, last: Last } | null = null;
-let error: string | null = null;
- 
-try {
-    const session = await auth.api.getSession({ headers: Astro.request.headers })
-    if (!session) throw new Error("Unauthorized")
-
-    const contentDir = process.env.CONTENT_DIR!
-    const slug = path.replace(/^wiki\//, "").replace(/\.txt$/, "").split("/");
-    const rawPage = await getSinglePage(contentDir, slug)
-
-    if (!rawPage) throw new Error("Page not found")
-
-    pageData =  {
-        content: rawPage.content,
-        sha: rawPage.lastModified.getTime().toString(),
-        last: {
-            updated: rawPage.lastModified.toString(),
-            committer: "",
-            commitSha: rawPage.lastModified.getTime().toString()
-        }
-    }
-
-} catch (e: any) {
-    if (e?.message === "Unauthorized") {
-        return Astro.redirect("/signin");
-    }
-    error = e?.message ?? "Unknown error";
-}
-
+import Editor from "../../components/island/Editor.svelte";
 ---
 
 <!doctype html>
@@ -55,7 +7,7 @@ try {
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>{path} — lore archive</title>
+    <title>edit — lore archive</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -64,7 +16,7 @@ try {
     />
     <style>
       *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
- 
+
       :root {
         --bg: #0f0f10;
         --surface: #18181b;
@@ -78,7 +30,7 @@ try {
         --font-ui: "IBM Plex Sans", sans-serif;
         --font-code: "IBM Plex Mono", monospace;
       }
- 
+
       html, body {
         height: 100%;
         background: var(--bg);
@@ -88,14 +40,14 @@ try {
         line-height: 1.5;
         -webkit-font-smoothing: antialiased;
       }
- 
+
       #app {
         display: flex;
         flex-direction: column;
         height: 100vh;
         overflow: hidden;
       }
- 
+
       header {
         display: flex;
         align-items: center;
@@ -107,7 +59,7 @@ try {
         user-select: none;
         gap: 0;
       }
- 
+
       .header-wordmark {
         font-family: var(--font-code);
         font-size: 11px;
@@ -117,14 +69,14 @@ try {
         text-transform: uppercase;
         margin-right: 16px;
       }
- 
+
       .header-sep {
         width: 1px;
         height: 16px;
         background: var(--border);
         margin-right: 16px;
       }
- 
+
       .header-path {
         font-family: var(--font-code);
         font-size: 12px;
@@ -134,35 +86,21 @@ try {
         white-space: nowrap;
         flex: 1;
       }
- 
-      .header-path .seg { color: #4a4a48; }
-      .header-path .filename { color: var(--text-primary); }
- 
+
       .editor-wrap {
         flex: 1;
         overflow: hidden;
         display: flex;
         flex-direction: column;
       }
- 
-      .error-state {
+
+      .loading-state {
         display: flex;
-        flex-direction: column;
         align-items: center;
         justify-content: center;
         flex: 1;
-        gap: 12px;
         color: var(--text-secondary);
         font-family: var(--font-ui);
-      }
- 
-      .error-state code {
-        font-family: var(--font-code);
-        font-size: 12px;
-        color: var(--danger);
-        background: rgba(192, 80, 74, 0.1);
-        padding: 4px 10px;
-        border-radius: 4px;
       }
     </style>
   </head>
@@ -172,39 +110,11 @@ try {
       <header>
         <span class="header-wordmark">Lore Archive Wiki Web Editor</span>
         <div class="header-sep"></div>
-        <div class="header-path">
-          {
-            (() => {
-              const parts = path.split("/");
-              return parts.map((seg, i) =>
-                i < parts.length - 1
-                  ? <span class="seg">{seg}/</span>
-                  : <span class="filename">{seg}</span>
-              );
-            })()
-          }
-        </div>
+        <div id="header-path" class="header-path"></div>
       </header>
- 
-      <div class="editor-wrap">
-        {
-          error ? (
-            <div class="error-state">
-              <p>could not load page</p>
-              <code>{error}</code>
-            </div>
-          ) : (
-            <Editor
-                client:only="svelte"
-                path={path}
-                initialContent={pageData?.content ?? ""}
-                sha={pageData?.sha ?? ""}
-                last={pageData?.last ?? ""
 
-              }
-            />
-          )
-        }
+      <div class="editor-wrap">
+        <Editor client:only="svelte" />
       </div>
     </div>
   </body>
