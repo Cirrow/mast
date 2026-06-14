@@ -4,9 +4,10 @@ pub fn init_db(path: &str) -> Connection {
     let conn = Connection::open(path).expect("failed to open auth db");
     conn.execute_batch(
         "CREATE TABLE IF NOT EXISTS users (
-            username    INTEGER PRIMARY KEY AUTOINCREMENT,
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
             github_id   INTEGER UNIQUE NOT NULL,
             login       TEXT NOT NULL,
+            avatar_url  TEXT,
             email       TEXT,
             role        TEXT,
             created_at  TEXT DEFAULT (datetime('now'))
@@ -16,14 +17,15 @@ pub fn init_db(path: &str) -> Connection {
 }
 
 
-pub fn upsert_user(conn: &Connection, github_id: i64, login: &str, email: Option<&str>) -> i64 {
+pub fn upsert_user(conn: &Connection, github_id: i64, login: &str, avatar_url: Option<&str>, email: Option<&str>) -> i64 {
     conn.execute(
-        "INSERT INTO users (github_id, login, email)
+        "INSERT INTO users (github_id, login, avatar_url, email)
          VALUES (?1, ?2, ?3, ?4)
          ON CONFLICT(github_id) DO UPDATE SET
             login = excluded.login,
+            avatar_url = excluded.avatar_url,
             email = excluded.email",
-        params![github_id, login, email],
+        params![github_id, login, avatar_url, email],
     ).expect("failed to upsert user");
 
     conn.query_row(
@@ -35,7 +37,7 @@ pub fn upsert_user(conn: &Connection, github_id: i64, login: &str, email: Option
 
 pub fn get_user(conn: &Connection, user_id: i64) -> Option<(i64, i64, String, Option<String>, Option<String>)> {
     conn.query_row(
-        "SELECT id, github_id, login, email FROM users WHERE id = ?1",
+        "SELECT id, github_id, login, avatar_url, email FROM users WHERE id = ?1",
         params![user_id],
         |row| Ok((
             row.get(0)?,

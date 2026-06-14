@@ -1,10 +1,17 @@
 // Wiki processing pipeline that transforms raw wiki content into HTML. Pages-processor (PP)
 
-import type { RawPage } from './git-service';
 
 import Lexer  from '../scripts/Lexing/lexer';
 import Parser from '../scripts/Parsing/parser';
 import Renderer from '../scripts/Rendering/renderer';
+
+export interface RawPage {
+    filePath: string,
+    content: string,
+    lastModified: Date,
+    size: number
+}
+
 
 // Configuration for page processing
 interface PageProcessorConfig {
@@ -17,7 +24,6 @@ interface PageProcessorConfig {
 
 // Processed page with HTML output
 interface ProcessedPage {
-    slug: string[];
     filePath: string;
     rawContent: string;
     htmlContent: string;
@@ -53,7 +59,6 @@ interface ProcessingStats {
 // Processing error details
 interface ProcessingError {
     filePath: string;
-    slug: string[];
     error: Error;
     stage: 'lexing' | 'parsing' | 'rendering' | 'validation';
 }
@@ -82,19 +87,14 @@ const defaultConfig: PageProcessorConfig = {
 
 
 // Extract title from wiki content (first heading or filename)
-function extractTitle( content: string, slug: string[] ): string {
+function extractTitle( content: string ): string {
     // Try to find first heading in content
-    const headingMatch = content.match(/^#+\s+(.+)$/m);
+const headingMatch = content.match(/^=+\s*(.+?)\s*=+\s*$/m);
     if (headingMatch) {
         return headingMatch[1].trim();
+    } else {
+        throw new Error("No h1 found in files")
     }
-    
-    // Fall back to last part of slug, formatted nicely
-    const lastSlug = slug[slug.length - 1] || 'Untitled';
-    return lastSlug
-        .split('-')
-        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-        .join(' ');
 }
 
 
@@ -178,14 +178,12 @@ export function processPage( rawPage: RawPage, config: Partial<PageProcessorConf
 
     
     try {
-
         let content = rawPage.content
         
         // Preprocessing
         if (finalConfig.stripEmptyLines) {
             content = content.replace(/^\s*\n/gm, '');
         }
-        
         // Stage 1: Lexical Analysis
         let tokens;
         try {
@@ -193,7 +191,6 @@ export function processPage( rawPage: RawPage, config: Partial<PageProcessorConf
         } catch (e) {
             throw new PageProcessorError( 'LORA: Lexical analysis failed', 'lexing', rawPage.filePath, e as Error )
         }
-        
         // Stage 2: Parsing
         let ast;
         try {
@@ -201,7 +198,6 @@ export function processPage( rawPage: RawPage, config: Partial<PageProcessorConf
         } catch (e) {
             throw new PageProcessorError( 'LORA PP: Parsing failed', 'parsing', rawPage.filePath, e as Error )
         }
-        
         // Stage 3: Rendering
         let htmlContent;
         try {
@@ -218,12 +214,13 @@ export function processPage( rawPage: RawPage, config: Partial<PageProcessorConf
                 throw new PageProcessorError( 'LORA PP: HTML validation failed', 'validation', rawPage.filePath, e as Error )
             }
         }
-        
+
         // Extract metadata
-        const title = extractTitle(rawPage.content, rawPage.slug);
+        const title = extractTitle(rawPage.content);
         const excerpt = extractExcerpt(rawPage.content);
         const wordCount = countWords(rawPage.content);
         const processingTime = Date.now() - startTime;
+
         
         // Generate table of contents
         let toc: TOCItem[] | undefined;
@@ -235,9 +232,8 @@ export function processPage( rawPage: RawPage, config: Partial<PageProcessorConf
         if (processingTime > finalConfig.maxProcessingTime) {
             console.warn(`LORA PP: Page ${rawPage.filePath} took ${processingTime}ms to process`);
         }
-        
+
         return {
-            slug: rawPage.slug,
             filePath: rawPage.filePath,
             rawContent: rawPage.content,
             htmlContent,
@@ -267,7 +263,6 @@ export function processPage( rawPage: RawPage, config: Partial<PageProcessorConf
 }
 
 
-// Process multiple wiki pages in parallel with error handling
 export async function processAllPages( rawPages: RawPage[], config: Partial<PageProcessorConfig> = {} ): Promise<{ processedPages: ProcessedPage[]; stats: ProcessingStats; }> {
     const finalConfig = { ...defaultConfig, ...config };
     const startTime = Date.now();
@@ -292,7 +287,6 @@ export async function processAllPages( rawPages: RawPage[], config: Partial<Page
             
             errors.push({
                 filePath: rawPage.filePath,
-                slug: rawPage.slug,
                 error: error instanceof Error ? error : new Error(String(error)),
                 stage: error instanceof PageProcessorError ? error.stage as any : 'unknown',
             });

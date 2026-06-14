@@ -4,7 +4,7 @@ import MinusIcon from "lucide-svelte/icons/minus";
 import PlusIcon from "lucide-svelte/icons/plus";
 
 
-const { routes = [], currentSlug = "", ...restProps } = $props<{
+const { routes = [], currentSlug = "" } = $props<{
     routes?: string[];
     currentSlug?: string;
 }>();
@@ -37,7 +37,7 @@ function buildTree(routes: string[]): Node[] {
     
     for (const route of routes) {
             const clean = route.replace(/^\.+\//, "").replace(/\.txt$/, "");
-        const segments = clean.split("/").filter(Boolean).slice(2); // strips `.wiki/wiki/`
+        const segments = clean.split("/").filter(Boolean)
         let currentMap = root;
 
         for (let i = 0; i < segments.length; i++) {

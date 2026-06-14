@@ -2,23 +2,34 @@
 
 [basic]
 name = "Mast Wiki Engine"
+dev_url = "http://localhost:4321"
 # default_page = 
 # favicon =
 
 image_as_home = false
 #image_path
+
+# [header]
 pinned_pages = [""]
 
+
+# [sidebar]
+# enable = true
+# collapsible = true
+# hide_pages = []
+#pinned_pages = []
+# auto_open_on_load = true
 
 
 [auth]
 allow_signup = true
 # auth_methods = ["github", "gitlab", "google", "email", "facebook"]
-
+# captcha = true
+# captcha_method =
 
 [storage]
 type = "local_git"
-
+location = "./.wiki/wiki"
 
 
 

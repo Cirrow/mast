@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { onMount, onDestroy, untrack } from "svelte";
+    import { onMount, onDestroy, tick } from "svelte";
     import { EditorView, keymap, drawSelection, highlightActiveLine } from "@codemirror/view";
     import { EditorState } from "@codemirror/state";
     import {
@@ -132,8 +132,11 @@
 
         path = pagePath;
 
-        const pathEl = document.getElementById("header-path");
-        if (pathEl) pathEl.textContent = pagePath;
+        const authRes = await fetch("/api/auth/me")
+        if (authRes.status === 401) {
+            window.location.href = "/signin"
+            return
+        }
 
         try {
             const res = await fetch(`/api/pages/${pagePath}`);
@@ -155,16 +158,10 @@
             last = data.last ?? { updated: "", committer: "", commitSha: "" };
 
             loading = false;
-
+            await tick();
             if (!editorElement) return;
 
-            const saveKeymap = keymap.of([
-            {
-                key: "Mod-s",
-                preventDefault: true,
-                run: () => { save(); return true; },
-            },
-            ]);
+            if (!editorElement) return;
 
             const state = EditorState.create({
                 doc: initialContent,
@@ -173,7 +170,6 @@
                     drawSelection(),
                     highlightActiveLine(),
                     keymap.of([...defaultKeymap, ...historyKeymap, indentWithTab]),
-                    saveKeymap,
                     theme,
                     EditorView.lineWrapping,
                     EditorView.updateListener.of((update) => {
@@ -221,26 +217,27 @@
 </script>
 
 {#if loading}
-  <div class="loading-state">
-    <span>loading…</span>
-  </div>
+    <div class="loading-state">
+        <span>loading…</span>
+    </div>
 {:else if loadError}
-  <div class="error-state">
-    <p>could not load page</p>
-    <code>{loadError}</code>
-  </div>
+    <div class="error-state">
+        <p>could not load page</p>
+        <code>{loadError}</code>
+    </div>
 {:else}
-  <div class="editor-root">
-    <div class="cm-host" bind:this={editorElement}></div>
+  
+    <div class="editor-root">
+        <div class="cm-host" bind:this={editorElement}></div>
 
-    <footer>
-      <div class="footer-left">
-        <span class="lastMod-label"><a href={"https://github.com/lorearchive/law-content/commits/main/" + path} class="a-no-style">Last modified on {last.updated ? new Date(last.updated).toLocaleDateString() : "?"} by {last.committer || "?"} @ {(last.commitSha || "").slice(0, 7) || "?"}</a></span>
-      </div>
-      <div class="footer-right">
-        {#if statusLabel}
-          <span class="status-msg" style:color={statusColor}>{statusLabel}</span>
-        {/if}
+        <footer>
+        <div class="footer-left">
+            <span class="lastMod-label"><a href={"https://github.com/lorearchive/law-content/commits/main/" + path} class="a-no-style">Last modified on {last.updated ? new Date(last.updated).toLocaleDateString() : "?"} by {last.committer || "?"} @ {(last.commitSha || "").slice(0, 7) || "?"}</a></span>
+        </div>
+        <div class="footer-right">
+            {#if statusLabel}
+            <span class="status-msg" style:color={statusColor}>{statusLabel}</span>
+            {/if}
         <span class="cursor-pos">
           {cursorLine}:{cursorCol}
         </span>

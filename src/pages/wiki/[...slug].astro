@@ -3,40 +3,45 @@ export const prerender = process.env.NODE_ENV === 'production'
 // get the pre processed data from props
 let { page, routes } = Astro.props;
 
-import { fetchWikiContent, getAllPages } from '../../utils/git-service'
+import { getAllPages } from '../../utils/get-pages';
 import { processAllPages } from '../../utils/pages-processor'
 import Shell from '../../layouts/Shell.astro'
 import RenderTOC from '../../components/RenderTOC.astro'
+import config from '#config';
+import * as path from "path"
 
 
 export async function getStaticPaths() {
-    const contentPath = await fetchWikiContent()
-    const rawPages = await getAllPages(contentPath)
+    const rawPages = await getAllPages(config.storage.location)
     const { processedPages } = await processAllPages(rawPages)
-    const filePaths = processedPages.map(page => page.filePath);
-    
+    const filePaths = processedPages.map(p => {
+        const targetBase = path.resolve(config.storage.location);
+        const parts = p.filePath.split(targetBase)
+        return parts[1] ? parts[1].replace(/^[/\\]+/, '') : '';
+    })
 
-    const routes = processedPages.map(page => { 
-    
-        const slugString = page.slug.join('/')
-    
+    return processedPages.map(page => {
+        const pageName = page.filePath.split('/').pop()?.replace('.txt', '') || 'home'
         return {
-            params: { slug: slugString },
+            params: { slug: pageName },
             props: { page, routes: filePaths }
         }
     })
-
-    return routes  
 }
 
 if (!page) {
     const contentDir = ".wiki/wiki"
     const rawPages = await getAllPages(contentDir)
-    const processed = (await processAllPages(rawPages)).processedPages
-    routes = processed.map(p => p.filePath)
-    if (Astro.params.slug) {
-        page = processed.find(p => p.slug.join("/") === Astro.params.slug)
-    }
+    const { processedPages } = await processAllPages(rawPages)
+    routes = processedPages.map(p => {
+        const targetBase = path.resolve(config.storage.location);
+        const parts = p.filePath.split(targetBase)
+        return parts[1] ? parts[1].replace(/^[/\\]+/, '') : '';
+    })
+
+    const pageName = Astro.url.pathname.replace(/^\/wiki\//, '').replace(/\/$/, '') || 'home'
+    page = processedPages.find(p => p.filePath.endsWith(`/${pageName}.txt`))!
+
     if (!page) return Astro.redirect("/wiki/home")
 }
 
@@ -55,7 +60,9 @@ const lastModifiedDate = page.metadata.lastModified.toLocaleString('en-GB', {
 }) + ' UTC'
 
 const pageURL = `#`
-const pageEditURL = `/admin/edit/${page.slug.join("/")}.txt`
+const contentRoot = path.resolve(config.storage.location)
+const editSlug = path.relative(contentRoot, page.filePath).replace(/\.txt$/, '')
+const pageEditURL = `/admin/edit?path=${editSlug}`
 const historyURL = `#`
 
 const isHomePage = Astro.url.pathname.endsWith('/home') || Astro.url.pathname.endsWith("/home/");

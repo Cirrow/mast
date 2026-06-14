@@ -27,7 +27,8 @@ const ConfigSchema = z.object({
     }),
 
     storage: z.object({
-        type: z.enum(["local_git", "remote_git"]).default("local_git")
+        type: z.enum(["local_git", "remote_git"]).default("local_git"),
+        location: z.string()
     })
 
 

@@ -1,12 +1,14 @@
 import global from './src/store'
 import { defineConfig } from 'astro/config'
 import { processAllPages } from './src/utils/pages-processor'
-import { fetchWikiContent, getAllPages } from './src/utils/git-service'
-
-import svelte from '@astrojs/svelte';
-import node from '@astrojs/node'
 
 import tailwindcss from '@tailwindcss/vite';
+
+
+import svelte from '@astrojs/svelte';
+
+
+import node from '@astrojs/node';
 
 
 export default defineConfig({
@@ -18,20 +20,10 @@ export default defineConfig({
       "/": "/wiki/home"
   },
 
-  integrations: [
-      
-      svelte(),
-  
-  ],
-
   image: {
     remotePatterns: [{ protocol: "https" }],
     domains: ["avatars.githubusercontent.com"]
   },
-
-  adapter: node({
-    mode: 'standalone'
-  }),
 
   vite: {
     plugins: [tailwindcss()],
@@ -43,5 +35,11 @@ export default defineConfig({
             '/api': 'http://localhost:3000'
         }
     }
-  }
+  },
+
+  integrations: [svelte()],
+
+  adapter: node({
+    mode: 'standalone'
+  })
 });

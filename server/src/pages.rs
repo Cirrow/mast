@@ -20,8 +20,8 @@ pub struct Last {
 pub async fn get_page( Path(path): Path<String>, )
     -> Result<Json<PageResponse>, StatusCode> {
 
-        let base = PathBuf::from("../.wiki/wiki");
-        let file_path = base.join(&path);
+        let base: PathBuf = PathBuf::from("../.wiki/wiki");
+        let file_path: PathBuf = base.join(format!("{}.txt", path));
 
         let canonical:PathBuf= file_path.canonicalize().map_err(|_| StatusCode::NOT_FOUND)?;
         if !canonical.starts_with(&base.canonicalize().map_err(|_| StatusCode::NOT_FOUND)?) {

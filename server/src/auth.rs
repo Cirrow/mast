@@ -1,15 +1,20 @@
-use std::sync::{Arc, Mutex};
+use crate::db;
+
 use axum::{
-    extract::{Query, State},
-    http::{StatusCode, header},
-    response::{IntoResponse, Redirect},
+    extract::{FromRequestParts, Request, State},
+    handler::Handler,
+    http::{StatusCode, Uri},
+    response::{IntoResponse, Redirect, Response},
     Json,
 };
-use rand::{Rng, RngExt};
 use reqwest;
 use rusqlite::Connection;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
+use std::future::Future;
+use std::pin::Pin;
+use std::sync::{Arc, Mutex};
 use tower_sessions::Session;
+use rand::RngExt;
 
 
 #[derive(Clone)]
@@ -24,14 +29,6 @@ pub struct AuthState {
 struct CallbackParams {
     code: String,
     state: String,
-}
-
-#[derive(Serialize)]
-struct UserResponse {
-    id: i64,
-    github_id: i64,
-    login: String,
-    email: Option<String>,
 }
 
 pub async fn login(session: Session, State(state): State<AuthState>) -> impl IntoResponse {
@@ -52,57 +49,77 @@ pub async fn login(session: Session, State(state): State<AuthState>) -> impl Int
     Redirect::to(&auth_url)
 }
 
-pub async fn callback(
-    session: Session,
-    State(state): State<AuthState>,
-    Query(params): Query<CallbackParams>,
-) -> impl IntoResponse {
-    // verify CSRF state
-    let saved_state: Option<String> = session.get("oauth_state").await.unwrap();
-    match saved_state {
-        Some(ref s) if s == ¶ms.state => {}
-        _ => return (StatusCode::FORBIDDEN, "state mismatch").into_response(),
+pub struct CallbackHandler;
+
+impl Handler<((),), AuthState> for CallbackHandler
+{
+    type Future = Pin<Box<dyn Future<Output = Response> + Send>>;
+
+    fn call(self, req: Request, state: AuthState) -> Self::Future {
+        Box::pin(async move {
+            let (mut parts, _body) = req.into_parts();
+
+            let session: Session = Session::from_request_parts(&mut parts, &state).await.unwrap();
+            let uri: Uri = Uri::from_request_parts(&mut parts, &state).await.unwrap();
+
+            let query_str: &str = uri.query().unwrap_or("");
+            let params: CallbackParams = serde_urlencoded::from_str(query_str).unwrap();
+
+            // verify CSRF state
+            let saved_state: Option<String> = session.get("oauth_state").await.unwrap();
+            match saved_state {
+                Some(s) if s == params.state => {}
+                _ => return (StatusCode::FORBIDDEN, "state mismatch").into_response(),
+            }
+            session.remove::<String>("oauth_state").await.unwrap();
+            
+            let client: reqwest::Client = reqwest::Client::new();
+            
+            let token_resp: reqwest::Response = client
+                .post("https://github.com/login/oauth/access_token")
+                .header("Accept", "application/json")
+                .header("Content-Type", "application/x-www-form-urlencoded")
+                .body(format!(
+                    "client_id={}&client_secret={}&code={}",
+                    state.github_client_id, state.github_client_secret, params.code
+                ))
+                .send()
+                .await
+                .unwrap();
+            
+            let token_body: serde_json::Value = token_resp.json().await.unwrap();
+            let access_token = match token_body["access_token"].as_str() {
+                Some(t) => t.to_string(),
+                None => return (StatusCode::BAD_REQUEST, "no access_token in response").into_response(),
+            };
+            let user_resp = client
+                .get("https://api.github.com/user")
+                .header("Authorization", format!("Bearer {}", access_token))
+                .header("User-Agent", "mast-wiki")
+                .send()
+                .await
+                .unwrap();
+            let gh_user: serde_json::Value = user_resp.json().await.unwrap();
+            let github_id = gh_user["id"].as_i64().unwrap();
+            let login = gh_user["login"].as_str().unwrap_or("unknown");
+            let avatar_url = gh_user["avatar_url"].as_str();
+            let email = gh_user["email"].as_str();
+            let user_id = {
+                let conn = state.db.lock().unwrap();
+                let id = db::upsert_user(&conn, github_id, login, avatar_url, email);
+                drop(conn);
+                id
+            };
+            session.insert("user_id", user_id).await.unwrap();
+            Redirect::to("/wiki/home").into_response()
+        })
     }
-    session.remove::<String>("oauth_state").await.unwrap();
-    // exchange code for access token
-    let client = reqwest::Client::new();
-    let token_resp = client
-        .post("https://github.com/login/oauth/access_token")
-        .header("Accept", "application/json")
-        .form(&[
-            ("client_id", &state.github_client_id),
-            ("client_secret", &state.github_client_secret),
-            ("code", ¶ms.code),
-        ])
-        .send()
-        .await
-        .unwrap();
-    let token_body: serde_json::Value = token_resp.json().await.unwrap();
-    let access_token = match token_body["access_token"].as_str() {
-        Some(t) => t.to_string(),
-        None => return (StatusCode::BAD_REQUEST, "no access_token in response").into_response(),
-    };
-    
-    // fetch GitHub user
-    let user_resp = client
-        .get("https://api.github.com/user")
-        .header("Authorization", format!("Bearer {}", access_token))
-        .header("User-Agent", "mast-wiki")
-        .send()
-        .await
-        .unwrap();
-    let gh_user: serde_json::Value = user_resp.json().await.unwrap();
-    let github_id = gh_user["id"].as_i64().unwrap();
-    let login = gh_user["login"].as_str().unwrap_or("unknown");
-    let email = gh_user["email"].as_str();
+}
 
-    // upsert into local db
-    let conn = state.db.lock().unwrap();
-    let user_id = db::upsert_user(&conn, github_id, login, email);
-    drop(conn);
-
-    session.insert("user_id", user_id).await.unwrap();
-    Redirect::to("/wiki/home").into_response()
+impl Clone for CallbackHandler {
+    fn clone(&self) -> Self {
+        CallbackHandler
+    }
 }
 
 pub async fn me(session: Session, State(state): State<AuthState>) -> Result<Json<serde_json::Value>, StatusCode> {
@@ -118,6 +135,12 @@ pub async fn me(session: Session, State(state): State<AuthState>) -> Result<Json
         "id": id,
         "github_id": github_id,
         "login": login,
+        "avatar_url": avatar_url,
         "email": email,
     })))
+}
+
+pub async fn logout(session: Session) -> impl IntoResponse {
+    session.clear().await;
+    StatusCode::OK
 }

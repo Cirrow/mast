@@ -10,9 +10,8 @@
     "server": "concurrently \"astro dev\" \"cd server && cargo run\""
   },
   "dependencies": {
-    "@astrojs/node": "^10.1.2",
-    "@astrojs/sitemap": "3.7.1",
-    "@astrojs/svelte": "^8.1.0",
+    "@astrojs/node": "^10.1.4",
+    "@astrojs/svelte": "^8.1.2",
     "@codemirror/commands": "^6.10.3",
     "@codemirror/language": "^6.12.3",
     "@codemirror/lint": "^6.9.6",
@@ -21,18 +20,11 @@
     "@codemirror/view": "^6.42.1",
     "@floating-ui/dom": "^1.7.6",
     "@tailwindcss/vite": "^4.3.0",
-    "astro": "^6.3.1",
-    "better-auth": "^1.6.10",
-    "better-sqlite3": "^12.10.0",
-    "cloudflare": "^5.2.0",
-    "config": "^4.4.1",
-    "dotenv": "^17.4.2",
-    "kysely": "^0.28.17",
+    "astro": "^6.4.6",
     "lucide-svelte": "^1.0.1",
-    "smol-toml": "^1.6.1",
-    "svelte": "^5.55.5",
+    "svelte": "^5.56.3",
     "tailwindcss": "^4.3.0",
-    "typescript": "^5.9.3",
+    "typescript": "^6.0.3",
     "zod": "^4.4.3"
   },
   "devDependencies": {

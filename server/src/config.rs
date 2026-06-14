@@ -1,4 +1,3 @@
-use dotenvy::dotenv;
 use serde::Deserialize;
 use std::path::PathBuf;
 
@@ -17,6 +16,7 @@ pub struct Basic {
     pub image_as_home: bool,
     pub image_path: Option<String>,
     pub pinned_pages: Vec<String>,
+    pub dev_url: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -32,7 +32,6 @@ pub struct Storage {
 
 impl Config {
     pub fn load() -> Self {
-        dotenv().ok();
 
         let content: String = std::fs::read_to_string("../mast-config.toml")
             .expect("mast-config.toml not found");
@@ -42,6 +41,12 @@ impl Config {
         config.content_dir = std::env::var("CONTENT_DIR")
             .map(PathBuf::from)
             .unwrap_or_else(|_| PathBuf::from("../.wiki/wiki"));
+
+        if config.basic.dev_url.is_none() {
+            config.basic.dev_url = Some(
+                std::env::var("MAST_URL").unwrap_or_else(|_| "http://localhost:3000".to_string())
+            )
+        }
         config
     }
 }

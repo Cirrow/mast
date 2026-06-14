@@ -2,6 +2,7 @@ mod config;
 mod pages;
 mod auth;
 mod db;
+mod save;
 
 use pages::get_page;
 
@@ -11,7 +12,7 @@ use rusqlite::Connection;
 use axum::{Router, routing::{get, post}, serve};
 
 use tower_http::services::ServeDir;
-use tower_sessions::{MemoryStore, SessionManagerLayer};
+use tower_sessions::{MemoryStore, SessionManagerLayer, cookie::SameSite};
 
 use std::net::SocketAddr;
 use tokio::net::TcpListener;
@@ -21,13 +22,15 @@ use tokio::net::TcpListener;
 
 async fn main() {
     tracing_subscriber::fmt::init();
+    dotenvy::from_filename("../.env.local").ok();
+
+    let cfg: config::Config = config::Config::load();
+    let mast_url: String = cfg.basic.dev_url.unwrap();
 
      let github_client_id: String = std::env::var("OAUTH_GITHUB_CLIENT_ID")
         .expect("OAUTH_GITHUB_CLIENT_ID not set");
     let github_client_secret: String = std::env::var("OAUTH_GITHUB_CLIENT_SECRET")
         .expect("OAUTH_GITHUB_CLIENT_SECRET not set");
-    let mast_url: String = std::env::var("MAST_URL")
-        .unwrap_or_else(|_| "http://localhost:3000".to_string());
 
 
     let conn: Connection = db::init_db("../.wiki/auth.db");
@@ -37,7 +40,8 @@ async fn main() {
     let session_store = MemoryStore::default();
     let session_layer = SessionManagerLayer::new(session_store)
         .with_secure(false)       // no HTTPS in dev
-        .with_name("mast-session");
+        .with_name("mast-session")
+        .with_same_site(SameSite::Lax);
 
     let auth_state: auth::AuthState = auth::AuthState {
         github_client_id,
@@ -49,9 +53,10 @@ async fn main() {
     let app: Router = Router::new()
         .route("/api/pages/{*path}", get(get_page))
         .route("/api/auth/github/login", get(auth::login))
-        .route("/api/auth/github/callback", get(auth::callback))
+        .route("/api/auth/github/callback", get(auth::CallbackHandler))
         .route("/api/auth/me", get(auth::me))
-        //.route("/api/auth/logout", post(auth::logout))
+        .route("/api/auth/logout", post(auth::logout))
+        .route("/api/save", post(save::save))
         .layer(session_layer)
         .with_state(auth_state)
         .fallback_service(ServeDir::new("../dist/client"));
