@@ -9,7 +9,7 @@ use pages::get_page;
 use std::sync::{Arc, Mutex};
 use rusqlite::Connection;
 
-use axum::{Router, routing::{get, post}, serve};
+use axum::{Router, routing::{get, post}, serve, response::Redirect};
 
 use tower_http::services::ServeDir;
 use tower_sessions::{MemoryStore, SessionManagerLayer, cookie::SameSite};
@@ -21,6 +21,7 @@ use tokio::net::TcpListener;
 #[tokio::main]
 
 async fn main() {
+    
     tracing_subscriber::fmt::init();
     dotenvy::from_filename("../.env.local").ok();
 
@@ -50,6 +51,11 @@ async fn main() {
         db,
     };
 
+
+    async fn root() -> Redirect {
+        Redirect::to("/wiki/home")
+    }
+
     let app: Router = Router::new()
         .route("/api/pages/{*path}", get(get_page))
         .route("/api/auth/github/login", get(auth::login))
@@ -57,6 +63,7 @@ async fn main() {
         .route("/api/auth/me", get(auth::me))
         .route("/api/auth/logout", post(auth::logout))
         .route("/api/save", post(save::save))
+        .route("/", get(root))
         .layer(session_layer)
         .with_state(auth_state)
         .fallback_service(ServeDir::new("../dist/client"));

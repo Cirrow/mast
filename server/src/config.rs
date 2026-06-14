@@ -34,7 +34,14 @@ pub struct Storage {
 impl Config {
     pub fn load() -> Self {
 
-        let content: String = std::fs::read_to_string("../mast-config.toml")
+        let config_path = if PathBuf::from("./mast-config.toml").exists() {
+            PathBuf::from("./mast-config.toml")
+        } else if PathBuf::from("../mast-config.toml").exists() {
+            PathBuf::from("../mast-config.toml")
+        } else {
+            panic!("mast-config.toml not found in ./ or ../ from the working directory");
+        };
+        let content: String = std::fs::read_to_string(&config_path)
             .expect("mast-config.toml not found");
         let mut config: Config = toml::from_str(&content)
             .expect("Failed to parse mast config");
