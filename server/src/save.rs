@@ -1,3 +1,5 @@
+use crate::config;
+
 use axum::{
     extract::{State},
     http::StatusCode,
@@ -31,6 +33,8 @@ pub async fn save(
     State(state): State<AuthState>,
     Json(body): Json<SaveRequest>
 ) -> Result<Json<SaveResponse>, (StatusCode, Json<serde_json::Value>)> {
+
+    let cfg: config::Config = config::Config::load();
 
     let user_id: Option<i64> = session.get("user_id").await.unwrap();
     let user_id = user_id.ok_or_else(|| {
@@ -88,7 +92,7 @@ pub async fn save(
         (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": "can't open git index"})))
     })?;
 
-    let rel_path: String = format!(".wiki/wiki/{}.txt", body.path);
+    let rel_path: String = format!("{}/{}.txt", cfg.storage.location, body.path);
     index.add_path(std::path::Path::new(&rel_path)).map_err(|_| {
         (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": "can't stage file"})))
     })?;
