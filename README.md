@@ -3,10 +3,12 @@
 # MAST
 
 </div>
+The most customizable, first ever Rust-based wiki engine. 
 
-A blazing-fast node-based wiki engine that actually looks good - and customizable.
 
 ## Stack
-- Astro
-- Svelte
-- SQLite (for sessions)
+- Frontend
+  - Astro
+  - Svelte
+- Backend
+  - Rust
