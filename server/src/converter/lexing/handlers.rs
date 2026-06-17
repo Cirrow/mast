@@ -1,5 +1,3 @@
-use serde_json::ser::CharEscape::Quote;
-
 use super::lexer::{Cursor, Token, TokenType};
 
 pub trait Handler {
@@ -24,7 +22,7 @@ pub struct UnderlineHandler;
 pub struct LinkOpenHandler;
 pub struct PipeHandler;
 pub struct LinkCloseHandler;
-
+pub struct PseudoHTMLHandler;
 pub struct ImageOpenHandler;
 pub struct ImageCloseHandler;
 pub struct QMarkHandler;
@@ -87,6 +85,63 @@ impl Handler for LinkOpenHandler {
 
     fn handle(&self, cursor: &Cursor) -> Token {
         Token { t_type: TokenType::LinkOpen, start: cursor.pos, end: cursor.pos + 2, ..Default::default() }
+    }
+}
+
+impl Handler for PseudoHTMLHandler {
+    fn trigger(&self)  -> Option<char> { Some('<') }
+    fn priority(&self) -> u16 { 15 }
+    fn maybe(&self, c: char) -> usize { if c == '<' { 2048 } else { 0 } }
+
+    fn confirm(&self, s: &str) -> bool {
+        let bytes = s.as_bytes();
+        
+        if bytes.len() < 3 || bytes[0] != b'<' || bytes[1] == b'<' { 
+            return false; 
+        }
+
+        match bytes[1] {
+            b'/' => {
+                if !bytes[2].is_ascii_alphabetic() { return false; }
+            }
+            b if b.is_ascii_alphabetic() => {}
+            _ => return false,
+        }
+
+        let (mut dq, mut sq) = (false, false);
+        for &b in &bytes[1..] {
+            match b {
+                b'"' if !sq => dq = !dq,
+                b'\'' if !dq => sq = !sq,
+                b'>' if !dq && !sq => return true,
+                _ => {}
+            }
+        }
+        false
+    }
+
+    fn handle(&self, cursor: &Cursor) -> Token {
+        let bytes = cursor.input[cursor.pos..].as_bytes();
+        
+        let (mut dq, mut sq) = (false, false);
+        
+        for (i, &b) in bytes.iter().enumerate().skip(1) {
+            match b {
+                b'"' if !sq => dq = !dq,
+                b'\'' if !dq => sq = !sq,
+                b'>' if !dq && !sq => {
+                    return Token {
+                        t_type: TokenType::PseudoHtml,
+                        // using direct slicing is safe here because we know it is ascii.
+                        t_detail: Some(cursor.input[cursor.pos + 1..cursor.pos + i].to_string()),
+                        start: cursor.pos,
+                        end: cursor.pos + i + 1,
+                    };
+                }
+                _ => {}
+            }
+        }
+        unreachable!("handle() called but matching closing bracket was not found")
     }
 }
 
@@ -248,12 +303,14 @@ pub fn builtin_handlers() -> Vec<Box<dyn Handler>> {
         Box::new(ItalicHandler),
         Box::new(UnderlineHandler),
         Box::new(LinkOpenHandler),
+        Box::new(LinkCloseHandler),
         Box::new(PipeHandler),
         Box::new(QMarkHandler),
         Box::new(ImageCloseHandler),
         Box::new(ImageOpenHandler),
         Box::new(FootnoteOpenHandler),
         Box::new(FootnoteCloseHandler),
-        Box::new(QuoteHandler)
+        Box::new(QuoteHandler),
+        Box::new(PseudoHTMLHandler)
     ]
 }

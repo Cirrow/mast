@@ -25,6 +25,8 @@ pub enum TokenType {
 
     Quote,
 
+    PseudoHtml,
+
     Linebreak,
     Newline,
     Whitespace,
@@ -155,7 +157,7 @@ mod tests {
     #[test] // cargo test lex_debug -- --nocapture
     fn lex_debug() {
         let lexer = Lexer::new();
-        let input = "> Hello! \\\\ >> HellO!!! >>Hello \\\\ >>Hello";
+        let input = "<callout type=\"sigma\" title=\"well, well, well...\" >Hello<callout />";
         let tokens = lexer.tokenise(&input);
         for t in &tokens {
             println!("{:?}", t);
