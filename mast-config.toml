@@ -28,7 +28,9 @@ allow_signup = true
 # captcha_method =
 
 # [permissions]
-# allow_page_creation = false
+# capabilities = [pagecreate, pageread, pageedit, pagedelete, usercreate, userread, useredit, userdelete]
+# roles = 
+# page_creation = [""]
 
 [storage]
 type = "local_git"
