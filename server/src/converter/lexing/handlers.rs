@@ -152,7 +152,7 @@ impl Handler for PipeHandler {
     fn confirm(&self, _s: &str) -> bool { true }
 
     fn handle(&self, cursor: &Cursor) -> Token {
-        Token { t_type: TokenType::LinkOpen, start: cursor.pos, end: cursor.pos + 1, ..Default::default() }
+        Token { t_type: TokenType::Pipe, start: cursor.pos, end: cursor.pos + 1, ..Default::default() }
     }
 }
 
@@ -163,7 +163,7 @@ impl Handler for LinkCloseHandler {
     fn confirm(&self, s: &str) -> bool { s == "]]" }
 
     fn handle(&self, cursor: &Cursor) -> Token {
-        Token { t_type: TokenType::LinkOpen, start: cursor.pos, end: cursor.pos + 2, ..Default::default() }
+        Token { t_type: TokenType::LinkClose, start: cursor.pos, end: cursor.pos + 2, ..Default::default() }
     }
 }
 
@@ -185,7 +185,7 @@ impl Handler for FootnoteCloseHandler {
     fn confirm(&self, s: &str) -> bool { s == "))" }
 
     fn handle(&self, cursor: &Cursor) -> Token {
-        Token { t_type: TokenType::ImageOpen, start: cursor.pos, end: cursor.pos + 2, ..Default::default() }
+        Token { t_type: TokenType::FootnoteClose, start: cursor.pos, end: cursor.pos + 2, ..Default::default() }
     }
 }
 

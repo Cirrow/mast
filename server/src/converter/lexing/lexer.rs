@@ -2,7 +2,7 @@ use std::collections::HashSet;
 use std::cmp::Reverse;
 use super::handlers::{Handler, builtin_handlers};
 
-#[derive(Debug, PartialEq, Eq, Default)]
+#[derive(Debug, PartialEq, Eq, Default, Clone, Copy)]
 pub enum TokenType {
     #[default]
     Text,
@@ -165,3 +165,4 @@ mod tests {
         println!("{}", &input);
     }
 }
+
