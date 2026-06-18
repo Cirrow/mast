@@ -1,4 +1,5 @@
 pub mod lexing;
+pub mod parsing;
 
 pub struct metadata {
 }
