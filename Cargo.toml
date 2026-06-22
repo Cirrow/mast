@@ -1,2 +1,3 @@
 [workspace]
 members = ["server", "converter"]
+resolver "3"

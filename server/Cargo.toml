@@ -2,7 +2,6 @@
 name = "mast"
 version = "0.0.1"
 edition = "2024"
-converter = { path = "../converter" }
 
 [dependencies]
 axum = "0.8.9"
@@ -21,3 +20,4 @@ rusqlite = { version = "0.39.0", features = ["bundled"] }
 rand = "0.10.1"
 serde_urlencoded = "0.7"
 git2 = "0.21.0"
+converter = { path = "../converter" }
