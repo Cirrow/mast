@@ -2,6 +2,7 @@
 name = "mast"
 version = "0.0.1"
 edition = "2024"
+converter = { path = "../converter" }
 
 [dependencies]
 axum = "0.8.9"

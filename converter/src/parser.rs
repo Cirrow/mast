@@ -1,4 +1,4 @@
-use crate::converter::lexing::{Token, TokenType};
+use crate::lexing::{Token, TokenType};
 
 #[derive(Debug, PartialEq, Eq, Default, Clone, Copy)]
 pub enum NodeType {

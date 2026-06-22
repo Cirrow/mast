@@ -3,7 +3,6 @@ mod pages;
 mod auth;
 mod db;
 mod save;
-mod converter;
 
 use pages::get_page;
 
