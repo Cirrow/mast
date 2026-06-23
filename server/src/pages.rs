@@ -6,6 +6,7 @@ use chrono;
 #[derive(Serialize)]
 pub struct PageResponse {
     pub content: String,
+    pub html: String,
     pub sha: String,
     pub last: Last,
 }
@@ -36,8 +37,11 @@ pub async fn get_page( Path(path): Path<String>, )
             metadata.modified().map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
         );
 
+        let html = converter::render_page(&content).html;
+
     Ok(Json(PageResponse {
         content,
+        html,
         sha: mtime.timestamp().to_string(),
         last: Last {
             updated: mtime.to_rfc3339(),
