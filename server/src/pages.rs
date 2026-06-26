@@ -1,4 +1,4 @@
-use axum::{extract::Path, http::StatusCode, Json};
+use axum::{extract::Path, http::StatusCode, Extension, Json};
 use serde::Serialize;
 use std::path::PathBuf;
 use chrono;
@@ -49,6 +49,10 @@ pub async fn get_page( Path(path): Path<String>, )
             commit_sha: String::new(),
         },
     }))
-    
-    
+}
+
+pub async fn get_config(
+    Extension(cfg): Extension<crate::config::Config>,
+) -> Json<crate::config::Config> {
+    Json(cfg)
 }

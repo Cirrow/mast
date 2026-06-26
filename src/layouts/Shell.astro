@@ -1,7 +1,8 @@
 ---
 const { title, routes, aside = true, toc = true } = Astro.props
 
-import config from "#config"
+const res = await fetch('http://localhost:3000/api/config')
+const config = res.ok ? await res.json() : { basic: { name: 'Wiki' } }
 
 import Header from "../components/island/Header.svelte"
 import '../styles/global.css'

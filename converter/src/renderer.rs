@@ -196,3 +196,20 @@ fn extract_attr<'a>(attrs: &'a str, name: &str) -> Option<String> {
     let value_end = attrs[value_start..].find('"')?;
     Some(attrs[value_start..value_start + value_end].to_string())
 }
+
+
+#[cfg(test)]
+mod tests {
+    use crate::lexing::Lexer;
+    use crate::parser::Parser;
+use crate::renderer::Renderer;
+
+    #[test]
+    fn debug_parse() {
+        let input = "**bold** and //italic//";
+        let tokens = Lexer::new().tokenise(input);
+        let ast = Parser::new().nodeify(&tokens);
+        let html = Renderer.render(&ast);
+        println!("{:#?}", html);
+    }
+}

@@ -436,7 +436,7 @@ impl Parser {
 
 #[cfg(test)]
 mod tests {
-    use crate::converter::lexing::Lexer;
+    use crate::lexing::Lexer;
     use super::Parser;
 
     #[test]

@@ -1,78 +1,56 @@
 ---
-export const prerender = true
-// get the pre processed data from props
-let { page, routes } = Astro.props;
-
-import { getAllPages } from '../../utils/get-pages';
-import { processAllPages } from '../../utils/pages-processor'
 import Shell from '../../layouts/Shell.astro'
-import RenderTOC from '../../components/RenderTOC.astro'
-import config from '#config';
-import * as path from "path"
 
+const slug = Astro.url.pathname.replace(/^\/wiki\//, '').replace(/\/$/, '') || 'home'
 
-export async function getStaticPaths() {
-    const rawPages = await getAllPages(config.storage.location)
-    const { processedPages } = await processAllPages(rawPages)
-    const filePaths = processedPages.map(p => {
-        const targetBase = path.resolve(config.storage.location);
-        const parts = p.filePath.split(targetBase)
-        return parts[1] ? parts[1].replace(/^[/\\]+/, '') : '';
-    })
+import fs from 'fs'
+import path from 'path'
+const wikiDir = path.resolve('.wiki/wiki')
+let routes: string[] = []
+try {
+  const files = fs.readdirSync(wikiDir)
+  for (const f of files) {
+    if (f.endsWith('.txt')) {
+      routes.push(f.replace('.txt', ''))
+    }
+  }
+} catch {}
 
-    return processedPages.map(page => {
-        const pageName = page.filePath.split('/').pop()?.replace('.txt', '') || 'home'
-        return {
-            params: { slug: pageName },
-            props: { page, routes: filePaths }
-        }
-    })
+const apiUrl = `http://localhost:3000/api/pages/${slug}`
+const res = await fetch(apiUrl)
+if (!res.ok) {
+  return Astro.redirect('/wiki/home')
 }
+const data = await res.json()
 
-if (!page) {
-    const contentDir = ".wiki/wiki"
-    const rawPages = await getAllPages(contentDir)
-    const { processedPages } = await processAllPages(rawPages)
-    routes = processedPages.map(p => {
-        const targetBase = path.resolve(config.storage.location);
-        const parts = p.filePath.split(targetBase)
-        return parts[1] ? parts[1].replace(/^[/\\]+/, '') : '';
-    })
-
-    const pageName = Astro.url.pathname.replace(/^\/wiki\//, '').replace(/\/$/, '') || 'home'
-    page = processedPages.find(p => p.filePath.endsWith(`/${pageName}.txt`))!
-
-    if (!page) return Astro.redirect("/wiki/home")
-}
-
-const h1Match = page.htmlContent.match(/<h1[^>]*>.*?<\/h1>/i)
+const htmlContent = data.html
+const h1Match = htmlContent.match(/<h1[^>]*>.*?<\/h1>/i)
 const h1match = h1Match ? h1Match[0] : ''
-const bodyContent = h1Match ? page.htmlContent.replace(h1Match[0], '') : page.htmlContent
+const bodyContent = h1Match ? htmlContent.replace(h1Match[0], '') : htmlContent
 
-const lastModifiedDate = page.metadata.lastModified.toLocaleString('en-GB', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-    timeZone: 'UTC',
-}) + ' UTC'
+const lastModifiedDate = data.last?.updated
+  ? new Date(data.last.updated).toLocaleString('en-GB', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+      timeZone: 'UTC',
+    }) + ' UTC'
+  : ''
 
-const pageURL = `#`
-const contentRoot = path.resolve(config.storage.location)
-const editSlug = path.relative(contentRoot, page.filePath).replace(/\.txt$/, '')
+const editSlug = slug
 const pageEditURL = `/admin/edit?path=${editSlug}`
+const pageURL = `#`
 const historyURL = `#`
 
-const isHomePage = Astro.url.pathname.endsWith('/home') || Astro.url.pathname.endsWith("/home/");
+const isHomePage = slug === 'home'
 ---
-
 
 {isHomePage ? (
 
-<Shell title={`${ page.title } - Lore Archive`}, routes={routes}, toc={false}>
-
+<Shell title={`Lore Archive`} routes={routes} toc={false}>
 
 <div id="bg-grid-pattern"></div>
 
@@ -84,7 +62,6 @@ const isHomePage = Astro.url.pathname.endsWith('/home') || Astro.url.pathname.en
     <div class="subtitle-container">
         <h3>From the Lore Archive Project</h3>
     </div>
-
 
     <div class="description-container">
         <span class="description-text"><em>Built for lore enthusiastic Senseis, by lore enthusiastic Senseis.</em> The Lore Archive Wiki is the premier
@@ -103,14 +80,12 @@ const isHomePage = Astro.url.pathname.endsWith('/home') || Astro.url.pathname.en
         </span>
     </div>
 
-
 </Shell>
-
-
 
 ) : (
 
-<Shell title={`${ page.title } - Lore Archive`}, routes={routes}>
+<Shell title={`${h1match ? h1match.replace(/<\/?h1[^>]*>/gi, '').trim() : slug} - Lore Archive`} routes={routes}>
+
     <header id="pageTitle" set:html={ h1match } />
 
     <div id="page-toolbar" class="page-toolbar">
@@ -135,18 +110,14 @@ const isHomePage = Astro.url.pathname.endsWith('/home') || Astro.url.pathname.en
 
     <article id="bodyContent" set:html={ bodyContent }></article>
 
-    <div slot="TOCbar">
-        <RenderTOC TOC={ page.toc }/>
-    </div>
 </Shell>
 )}
 
-
 <style>
     :root{
-        --cell: 100px;     /* size of each square */
-        --stroke: 1px;    /* line thickness */
-        --color: #dddddd;    /* line color */
+        --cell: 100px;
+        --stroke: 1px;
+        --color: #dddddd;
     }
         
     #bg-grid-pattern {
@@ -172,20 +143,19 @@ const isHomePage = Astro.url.pathname.endsWith('/home') || Astro.url.pathname.en
     /* Homepage Styles */
     .hero-text-container {
         position: absolute;
-        top: 2.5rem; /* top-10 = 40px = 2.5rem */
+        top: 2.5rem;
         left: 0;
         right: 0;
         bottom: 0;
         font-family: 'Syne', sans-serif;
-        font-weight: 500; /* font-syne-500 */
+        font-weight: 500;
     }
 
     .hero-text {
-        font-size: 9rem; /* text-9xl */
+        font-size: 9rem;
         position: absolute;
         margin: 0;
         padding: 0;
-        /* h1-no-style */
         color: inherit;
         font-weight: inherit;
         line-height: inherit;
@@ -195,33 +165,33 @@ const isHomePage = Astro.url.pathname.endsWith('/home') || Astro.url.pathname.en
     }
 
     .hero-text-right {
-        right: -1.75rem; /* -right-7 = -28px = -1.75rem */
-        top: 2.5rem; /* top-10 = 40px = 2.5rem */
+        right: -1.75rem;
+        top: 2.5rem;
     }
 
     .hero-text-left {
-        left: -2.5rem; /* -left-10 = -40px = -2.5rem */
-        top: 10rem; /* top-40 = 160px = 10rem */
+        left: -2.5rem;
+        top: 10rem;
     }
 
     .subtitle-container {
         position: absolute;
-        top: 22.5rem; /* top-90 = 360px = 22.5rem */
+        top: 22.5rem;
         font-family: 'Syne', sans-serif;
-        font-weight: 400; /* font-syne-400 */
+        font-weight: 400;
         left: 50%;
-        transform: translateX(-50%); /* left-1/2 -translate-x-1/2 */
+        transform: translateX(-50%);
     }
 
     .description-container {
         position: absolute;
-        top: 33.75rem; /* top-135 = 540px = 33.75rem */
-        left: 3.75rem; /* left-15 = 60px = 3.75rem */
+        top: 33.75rem;
+        left: 3.75rem;
     }
 
     .description-text {
         font-family: 'Syne', sans-serif;
-        opacity: 0.65; /* opacity-65 */
+        opacity: 0.65;
     }
 
     .plain-link {
@@ -231,20 +201,20 @@ const isHomePage = Astro.url.pathname.endsWith('/home') || Astro.url.pathname.en
 
     /* Regular Page Styles */
     .page-toolbar {
-        margin-top: 0.75rem; /* mt-3 = 12px = 0.75rem */
-        padding: 0.5rem; /* p-2 = 8px = 0.5rem */
-        border-top: 1px solid black; /* border-t border-black */
-        border-bottom: 1px solid black; /* border-b border-black */
-        margin-bottom: 1.75rem; /* mb-7 = 28px = 1.75rem */
+        margin-top: 0.75rem;
+        padding: 0.5rem;
+        border-top: 1px solid black;
+        border-bottom: 1px solid black;
+        margin-bottom: 1.75rem;
         display: flex;
         flex-direction: row;
-        align-items: center; /* items-center */
-        justify-content: space-between; /* justify-between */
+        align-items: center;
+        justify-content: space-between;
     }
 
     .toolbar-section {
         display: flex;
         flex-direction: row;
-        align-items: center; /* items-center */
+        align-items: center;
     }
 </style>

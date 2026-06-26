@@ -4,12 +4,12 @@ mod auth;
 mod db;
 mod save;
 
-use pages::get_page;
+use pages::{get_page, get_config};
 
 use std::sync::{Arc, Mutex};
 use rusqlite::Connection;
 
-use axum::{Router, routing::{get, post}, serve, response::Redirect};
+use axum::{Extension, Router, routing::{get, post}, serve, response::Redirect};
 
 use tower_http::services::ServeDir;
 use tower_sessions::{MemoryStore, SessionManagerLayer, cookie::SameSite};
@@ -26,7 +26,7 @@ async fn main() {
     dotenvy::from_filename("../.env.local").ok();
 
     let cfg: config::Config = config::Config::load();
-    let mast_url: String = cfg.basic.dev_url.unwrap();
+    let mast_url: String = cfg.basic.dev_url.clone().unwrap();
 
      let github_client_id: String = std::env::var("OAUTH_GITHUB_CLIENT_ID")
         .expect("OAUTH_GITHUB_CLIENT_ID not set");
@@ -58,6 +58,7 @@ async fn main() {
 
     let app: Router = Router::new()
         .route("/api/pages/{*path}", get(get_page))
+        .route("/api/config", get(get_config))
         .route("/api/auth/github/login", get(auth::login))
         .route("/api/auth/github/callback", get(auth::CallbackHandler))
         .route("/api/auth/me", get(auth::me))
@@ -66,6 +67,7 @@ async fn main() {
         .route("/", get(root))
         .layer(session_layer)
         .with_state(auth_state)
+        .layer(Extension(cfg))
         .fallback_service(ServeDir::new("../dist/client"));
 
     let addr: SocketAddr = SocketAddr::from(([0,0,0,0], 3000));

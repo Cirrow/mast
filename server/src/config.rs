@@ -1,7 +1,7 @@
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Config {
     pub basic: Basic,
     pub auth: Auth,
@@ -10,7 +10,7 @@ pub struct Config {
     pub content_dir: PathBuf
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Basic {
     pub name: String,
     pub image_as_home: bool,
@@ -19,11 +19,11 @@ pub struct Basic {
     pub dev_url: Option<String>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Auth {
     pub allow_signup: bool,
 }
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Storage {
     #[serde(rename = "type")]
     pub storage_type: String,

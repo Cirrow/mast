@@ -1,13 +1,7 @@
-import global from './src/store'
 import { defineConfig } from 'astro/config'
-import { processAllPages } from './src/utils/pages-processor'
 
 import tailwindcss from '@tailwindcss/vite';
-
-
 import svelte from '@astrojs/svelte';
-
-
 import node from '@astrojs/node';
 
 
