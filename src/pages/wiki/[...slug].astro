@@ -45,44 +45,8 @@ const pageEditURL = `/admin/edit?path=${editSlug}`
 const pageURL = `#`
 const historyURL = `#`
 
-const isHomePage = slug === 'home'
 ---
 
-{isHomePage ? (
-
-<Shell title={`Lore Archive`} routes={routes} toc={false}>
-
-<div id="bg-grid-pattern"></div>
-
-    <div class="hero-text-container">
-        <h1 class="hero-text hero-text-right">The Lore</h1>
-        <h1 class="hero-text hero-text-left">Archive Wiki</h1>
-    </div>
-
-    <div class="subtitle-container">
-        <h3>From the Lore Archive Project</h3>
-    </div>
-
-    <div class="description-container">
-        <span class="description-text"><em>Built for lore enthusiastic Senseis, by lore enthusiastic Senseis.</em> The Lore Archive Wiki is the premier
-        <br />source of truth of the lore, fictional setting, and worldview of the mobile game <strong>Blue Archive</strong>,
-        <br /> created by the Lore Archive Project. It's open to be edited by anyone, anytime, anywhere.
-        <br />It's fast, free from ads, and looks nice.
-        <br />
-        <br />
-        <br />
-        <br />As of now, the Lore Archive Wiki is solely developed by and maintained by one man, me.
-        <br />If you have spare coffee money, why not buy me a coffee and support the project
-        <br />instead of spending it on pyroexenes(!?)
-        <br />
-        <br />
-        <br />If you have any questions, complaints, comments, or simply want to say hi, feel free to reach out at <a class="plain-link" href="mailto:&#99;&#105;&#114;&#114;&#111;&#119;&#64;&#112;&#114;&#111;&#116;&#111;&#110;&#46;&#109;&#101;"><u>&#99;&#105;&#114;&#114;&#111;&#119;&#64;&#112;&#114;&#111;&#116;&#111;&#110;&#46;&#109;&#101;</u></a>.
-        </span>
-    </div>
-
-</Shell>
-
-) : (
 
 <Shell title={`${h1match ? h1match.replace(/<\/?h1[^>]*>/gi, '').trim() : slug} - Lore Archive`} routes={routes}>
 
@@ -111,7 +75,7 @@ const isHomePage = slug === 'home'
     <article id="bodyContent" set:html={ bodyContent }></article>
 
 </Shell>
-)}
+)
 
 <style>
     :root{
