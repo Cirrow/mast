@@ -248,7 +248,7 @@ impl Handler for QuoteHandler {
     fn trigger(&self)                 -> Option<char> { Some('>') }
     fn priority(&self)                -> u16 { 20 }
     fn maybe(&self, c: char)          -> usize { if c == '>' { 7 } else { 0 } } // max number of allowed quote level = 7
-    fn confirm(&self, s: &str) -> bool {  true  }
+    fn confirm(&self, _s: &str) -> bool {  true  }
     fn requires_line_start(&self)     -> bool { true }
 
     fn handle(&self, cursor: &Cursor) -> Token { 

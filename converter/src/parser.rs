@@ -25,7 +25,8 @@ pub struct Node {
     pub n_type: NodeType,
     pub children: Vec<Node>,
     pub n_detail: Option<String>,
-    pub pos: usize,
+    pub start: usize,
+    pub end: usize
 }
 
 type Stack = Vec<(NodeType, Vec<Node>, Option<String>)>;
@@ -57,7 +58,8 @@ impl Parser {
                         n_type: NodeType::Heading,
                         n_detail: t.t_detail.clone(),
                         children: content,
-                        pos: t.start,
+                        start: t.start,
+                        end: t.end
                     });
                     i = end + 1;
                 }
@@ -69,7 +71,8 @@ impl Parser {
                         n_type: NodeType::Quote,
                         n_detail: t.t_detail.clone(),
                         children: content,
-                        pos: t.start,
+                        start: t.start,
+                        end: t.end
                     });
                     i = end + 1;
                 }
@@ -81,7 +84,7 @@ impl Parser {
                         blocks.push(Node {
                             n_type: NodeType::Paragraph,
                             children: content,
-                            pos: tokens[i].start,
+                            start: tokens[i].start,
                             ..Default::default()
                         });
                     }
@@ -129,7 +132,7 @@ impl Parser {
                             Self::emit(
                                 &mut stack,
                                 &mut result,
-                                Node { n_type: nt, children, pos: t.start, ..Default::default() },
+                                Node { n_type: nt, children, start: t.start, ..Default::default() },
                             );
                         } else {
                             panic!(
@@ -204,7 +207,7 @@ impl Parser {
                         Self::emit(
                             &mut stack,
                             &mut result,
-                            Node {  n_type: NodeType::Link, children, n_detail: target, pos: t.start, },
+                            Node {  n_type: NodeType::Link, children, n_detail: target, start: t.start, end: t.end },
                         );
                     } else {
                         panic!("Unmatched LinkClose ]] at pos {}", t.start);
@@ -252,7 +255,8 @@ impl Parser {
                                 n_type: NodeType::Image,
                                 children,
                                 n_detail: target,
-                                pos: t.start,
+                                start: t.start,
+                                end: t.end
                             },
                         );
                     } else {
@@ -279,7 +283,7 @@ impl Parser {
                             Node {
                                 n_type: NodeType::Footnote,
                                 children,
-                                pos: t.start,
+                                start: t.start,
                                 ..Default::default()
                             },
                         );
@@ -311,7 +315,8 @@ impl Parser {
                                     n_type: NodeType::PseudoHtml,
                                     children,
                                     n_detail: t.t_detail.clone(),
-                                    pos: t.start,
+                                    start: t.start,
+                                    end: t.end
                                 },
                             );
                         } else {
@@ -327,7 +332,7 @@ impl Parser {
                             Node {
                                 n_type: NodeType::PseudoHtml,
                                 n_detail: t.t_detail.clone(),
-                                pos: t.start,
+                                start: t.start,
                                 ..Default::default()
                             },
                         );
@@ -410,7 +415,8 @@ impl Parser {
                 _ => unreachable!(),
             },
             n_detail: t.t_detail.clone(),
-            pos: t.start,
+            start: t.start,
+            end: t.end,
             children: vec![],
         }
     }

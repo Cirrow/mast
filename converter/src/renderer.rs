@@ -1,8 +1,15 @@
 use crate::parser::{Node, NodeType};
 
-pub struct Renderer;
+pub struct Renderer<'a> {
+    source: &'a str,
+}
 
-impl Renderer {
+impl<'a> Renderer<'a> {
+
+    pub fn new(source: &'a str) -> Self {
+        Renderer { source }
+    }
+
     pub fn render(&self, nodes: &[Node]) -> String {
         self.render_children(nodes)
     }
@@ -14,7 +21,7 @@ impl Renderer {
     fn render_node(&self, node: &Node) -> String {
         match node.n_type {
             NodeType::Text => {
-                escape_html(node.n_detail.as_deref().unwrap_or(""))
+                escape_html(&self.source[node.start..node.end])
             }
 
             NodeType::Bold => {
@@ -91,7 +98,7 @@ impl Renderer {
             }
 
             NodeType::Whitespace => {
-                node.n_detail.as_deref().unwrap_or(" ").to_string()
+                self.source[node.start..node.end].to_string()
             }
 
             NodeType::Paragraph => {
@@ -209,7 +216,7 @@ use crate::renderer::Renderer;
         let input = "**bold** and //italic//";
         let tokens = Lexer::new().tokenise(input);
         let ast = Parser::new().nodeify(&tokens);
-        let html = Renderer.render(&ast);
+        let html = Renderer::new(input).render(&ast);
         println!("{:#?}", html);
     }
 }
