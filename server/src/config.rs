@@ -22,6 +22,7 @@ pub struct Basic {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Auth {
     pub allow_signup: bool,
+    pub edit_requires_auth: bool,
 }
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Storage {
