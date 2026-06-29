@@ -36,19 +36,24 @@ pub async fn save(
 
     let cfg: config::Config = config::Config::load();
 
-    let user_id: Option<i64> = session.get("user_id").await.unwrap();
-    let user_id = user_id.ok_or_else(|| {
-        (StatusCode::UNAUTHORIZED, Json(serde_json::json!({"error": "unauthorized"})))
-    })?;
+    let (login, author_email): (String, String) = if cfg.auth.edit_requires_auth {
+        let user_id: Option<i64> = session.get("user_id").await.unwrap();
+        let user_id = user_id.ok_or_else(|| {
+            (StatusCode::UNAUTHORIZED, Json(serde_json::json!({"error": "unauthorized"})))
+        })?;
 
-    let conn= state.db.lock().unwrap();
-    let user: (i64, i64, String, Option<String>, Option<String>) = db::get_user(&conn, user_id).ok_or_else(|| {
-        (StatusCode::UNAUTHORIZED, Json(serde_json::json!({"error": "user not found"})))
-    })?;
-    drop(conn);
+        let conn = state.db.lock().unwrap();
+        let user = db::get_user(&conn, user_id).ok_or_else(|| {
+            (StatusCode::UNAUTHORIZED, Json(serde_json::json!({"error": "user not found"})))
+        })?;
+        drop(conn);
 
-
-    let (_id, _github_id, login, _avatar_url, email) = user;
+        let (_id, _github_id, login, _avatar_url, email) = user;
+        let email = email.unwrap_or_else(|| format!("{}@users.noreply.github.com", login));
+        (login, email)
+    } else {
+        ("guest".to_string(), "guest@localhost".to_string())
+    };
 
     let base = PathBuf::from("../.wiki/wiki");
     let file_path = base.join(format!("{}.txt", body.path));
@@ -105,9 +110,7 @@ pub async fn save(
         (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": "can't find tree"})))
     })?;
 
-    let email_fallback = format!("{}@users.noreply.github.com", login);
-    let author_email = email.as_deref().unwrap_or(&email_fallback);
-    let signature = git2::Signature::now(&login, author_email).map_err(|_| {
+    let signature = git2::Signature::now(&login, &author_email).map_err(|_| {
         (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": "can't create signature"})))
     })?;
 
