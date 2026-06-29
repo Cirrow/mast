@@ -23,6 +23,7 @@ pinned_pages = [""]
 
 [auth]
 allow_signup = true
+edit_requires_auth = false
 # auth_methods = ["github", "gitlab", "google", "email", "facebook"]
 # captcha = true
 # captcha_method =

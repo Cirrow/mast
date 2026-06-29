@@ -1,6 +1,21 @@
 ---
-export const prerender = true
 import Editor from "../../components/island/Editor.svelte";
+
+const cookie = Astro.request.headers.get('cookie')
+const res = await fetch('http://localhost:3000/api/auth/me', {
+    headers: cookie ? { cookie } : {}
+})
+
+const conf = await fetch('http://localhost:3000/api/config')
+const config = conf.ok ? await conf.json() : {}
+
+if (config.auth.signin_to_edit && res.status === 401) {
+    return Astro.redirect('/signin')
+
+} else if (!config.auth.signin_to_edit) {
+    
+}
+
 ---
 
 <!doctype html>
