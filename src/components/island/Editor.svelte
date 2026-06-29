@@ -132,19 +132,11 @@
 
         path = pagePath;
 
-        const authRes = await fetch("/api/auth/me")
-        if (authRes.status === 401) {
-            window.location.href = "/signin"
-            return
-        }
+        
 
         try {
             const res = await fetch(`/api/pages/${pagePath}`);
 
-            if (res.status === 401) {
-                window.location.href = "/signin";
-                return;
-            }
 
             if (!res.ok) {
                 loadError = `failed to load page (${res.status})`;
@@ -302,7 +294,6 @@
     background: #18181b;
     padding: 0 16px;
     flex-shrink: 0;
-    user-select: none;
   }
 
   .footer-left,
