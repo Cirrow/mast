@@ -6,6 +6,7 @@ use super::handlers::{Handler, builtin_handlers};
 pub enum TokenType {
     #[default]
     Text,
+    Hr,
 
     Bold,
     Italic,
@@ -112,6 +113,8 @@ impl Lexer {
                     }
 
                     if !handled {
+                        start_of_line = false;
+                        tokens.push(Token { start: cursor.pos, end: cursor.pos + 1, ..Default::default() });
                         cursor.pos += 1;
                     }
                 }

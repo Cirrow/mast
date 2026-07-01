@@ -4,6 +4,7 @@ use crate::lexing::{Token, TokenType};
 pub enum NodeType {
     #[default] Text,
     Paragraph,
+    Hr,
     Bold,
     Italic,
     Underline,
@@ -64,6 +65,17 @@ impl Parser {
                     i = end + 1;
                 }
 
+                TokenType::Hr => {
+                    blocks.push(Node {
+                        n_type: NodeType::Hr,
+                        start: t.start,
+                        end: t.end,
+                        ..Default::default()
+                    });
+                    let end = self.line_end(tokens, i + 1);
+                    i = end + 1;
+                }
+
                 TokenType::Quote => {
                     let end: usize = self.line_end(tokens, i + 1);
                     let content: Vec<Node> = self.inline_parse(&tokens[i + 1..end]);
@@ -120,7 +132,17 @@ impl Parser {
                     let nt: NodeType = Self::to_nt(t.t_type);
                     let count: usize = count_in_stack(&stack, nt);
                     if count % 2 == 0 {
+                        if i + 1 < tokens.len() && tokens[i + 1].t_type == t.t_type {
+                            Self::emit(&mut stack, &mut result, Node {
+                                start: t.start,
+                                end: tokens[i + 1].end,
+                                ..Default::default()
+                            });
+                            i += 2;
+                            continue;
+                        }
                         stack.push((nt, vec![], None));
+
                     } else {
                         let top_matches: bool = stack
                             .last()
@@ -447,7 +469,7 @@ mod tests {
 
     #[test]
     fn debug_parse() {
-        let input = "**bold** and //italic//";
+        let input = "****bold**** and //italic//";
         let tokens = Lexer::new().tokenise(input);
         let ast = Parser::new().nodeify(&tokens);
         println!("{:#?}", ast);

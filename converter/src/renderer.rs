@@ -81,6 +81,10 @@ impl<'a> Renderer<'a> {
                 )
             }
 
+            NodeType::Hr => {
+                String::from("<hr class=\"mast-hr\" />")
+            }
+
             NodeType::PseudoHtml => {
                 let detail = node.n_detail.as_deref().unwrap_or("");
                 let is_self_closing = detail.trim_end().ends_with('/');

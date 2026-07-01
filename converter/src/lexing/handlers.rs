@@ -29,6 +29,7 @@ pub struct QMarkHandler;
 pub struct FootnoteOpenHandler;
 pub struct FootnoteCloseHandler;
 pub struct QuoteHandler;
+pub struct HrHandler;
 
 
 impl Handler for WhitespaceHandler {
@@ -51,7 +52,16 @@ impl Handler for BoldHandler {
     fn confirm(&self, s: &str) -> bool { s == "**" }
 
     fn handle(&self, cursor: &Cursor) -> Token {
-        Token { t_type: TokenType::Bold, start: cursor.pos, end: cursor.pos + 2, ..Default::default() }
+        let preceded_by_nonspace = cursor.pos > 0
+            && !cursor.input[cursor.pos - 1..cursor.pos].chars().next().unwrap().is_whitespace();
+        let followed_by_nonspace = cursor.pos + 3 <= cursor.input.len()
+            && !cursor.input[cursor.pos + 2..cursor.pos + 3].chars().next().unwrap().is_whitespace();
+
+        if preceded_by_nonspace || followed_by_nonspace {
+            Token { t_type: TokenType::Bold, start: cursor.pos, end: cursor.pos + 2, ..Default::default() }
+        } else {
+            Token { start: cursor.pos, end: cursor.pos + 2, ..Default::default() }
+        }
     }
 }
 
@@ -62,7 +72,16 @@ impl Handler for ItalicHandler {
     fn confirm(&self, s: &str) -> bool { s == "//" }
 
     fn handle(&self, cursor: &Cursor) -> Token {
-        Token { t_type: TokenType::Italic, start: cursor.pos, end: cursor.pos + 2, ..Default::default() }
+        let preceded_by_nonspace = cursor.pos > 0
+            && !cursor.input[cursor.pos - 1..cursor.pos].chars().next().unwrap().is_whitespace();
+        let followed_by_nonspace = cursor.pos + 3 <= cursor.input.len()
+            && !cursor.input[cursor.pos + 2..cursor.pos + 3].chars().next().unwrap().is_whitespace();
+
+        if preceded_by_nonspace || followed_by_nonspace {
+            Token { t_type: TokenType::Italic, start: cursor.pos, end: cursor.pos + 2, ..Default::default() }
+        } else {
+            Token { start: cursor.pos, end: cursor.pos + 2, ..Default::default() }
+        }
     }
 }
 
@@ -73,7 +92,16 @@ impl Handler for UnderlineHandler {
     fn confirm(&self, s: &str) -> bool { s == "__" }
 
     fn handle(&self, cursor: &Cursor) -> Token {
-        Token { t_type: TokenType::Underline, start: cursor.pos, end: cursor.pos + 2, ..Default::default() }
+        let preceded_by_nonspace = cursor.pos > 0
+            && !cursor.input[cursor.pos - 1..cursor.pos].chars().next().unwrap().is_whitespace();
+        let followed_by_nonspace = cursor.pos + 3 <= cursor.input.len()
+            && !cursor.input[cursor.pos + 2..cursor.pos + 3].chars().next().unwrap().is_whitespace();
+
+        if preceded_by_nonspace || followed_by_nonspace {
+            Token { t_type: TokenType::Underline, start: cursor.pos, end: cursor.pos + 2, ..Default::default() }
+        } else {
+            Token { start: cursor.pos, end: cursor.pos + 2, ..Default::default() }
+        }
     }
 }
 
@@ -85,6 +113,18 @@ impl Handler for LinkOpenHandler {
 
     fn handle(&self, cursor: &Cursor) -> Token {
         Token { t_type: TokenType::LinkOpen, start: cursor.pos, end: cursor.pos + 2, ..Default::default() }
+    }
+}
+
+impl Handler for HrHandler {
+    fn trigger(&self)           -> Option<char> { Some('-') }
+    fn priority(&self)          -> u16 { 4}
+    fn maybe(&self, c: char)   -> usize { if c == '-' { 5 } else { 0 } }
+    fn confirm(&self, s: &str) -> bool { s == "----\n" }
+    fn requires_line_start(&self)     -> bool { true }
+
+    fn handle(&self, cursor: &Cursor) -> Token {
+        Token { t_type: TokenType::Hr, start: cursor.pos, end: cursor.pos + 4, ..Default::default() }
     }
 }
 
@@ -311,6 +351,7 @@ pub fn builtin_handlers() -> Vec<Box<dyn Handler>> {
         Box::new(FootnoteOpenHandler),
         Box::new(FootnoteCloseHandler),
         Box::new(QuoteHandler),
-        Box::new(PseudoHTMLHandler)
+        Box::new(PseudoHTMLHandler),
+        Box::new(HrHandler)
     ]
 }
