@@ -386,10 +386,7 @@ impl Parser {
                                     .unwrap_or_else(|| format!("{:?}", nt))
                             })
                             .collect();
-                        panic!(
-                            "Unclosed constructs at EOF: {}",
-                            names.join(", ")
-                        );
+                        eprintln!("warning: unclosed formatting at EOF: {}", names.join(", "));
                     }
                     break;
                 }
@@ -401,6 +398,13 @@ impl Parser {
                     );
                 }
             }
+        }
+
+        if !stack.is_empty() {
+            let names: Vec<String> = stack.iter().map(|(nt, _, tag)| {
+                tag.clone().unwrap_or_else(|| format!("{:?}", nt))
+            }).collect();
+            eprintln!("warning: unclosed formatting: {}", names.join(", "));
         }
 
         result
