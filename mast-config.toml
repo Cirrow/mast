@@ -23,15 +23,16 @@ pinned_pages = [""]
 
 [auth]
 allow_signup = true
-edit_requires_auth = false
-# auth_methods = ["github", "gitlab", "google", "email", "facebook"]
+users_file = "conf/users.toml"
+auth_methods = ["email", "username"] # supported: ["github", "gitlab", "google", "apple", "facebook"]
 # captcha = true
 # captcha_method =
 
-# [permissions]
-# capabilities = [pagecreate, pageread, pageedit, pagedelete, usercreate, userread, useredit, userdelete]
-# roles = 
-# page_creation = [""]
+# [acl]
+# enable = true
+# anon_perm = "n" # n, r, u, c, d
+# allauth_perm = 
+
 
 [storage]
 type = "local_git"

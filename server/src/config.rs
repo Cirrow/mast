@@ -6,8 +6,6 @@ pub struct Config {
     pub basic: Basic,
     pub auth: Auth,
     pub storage: Storage,
-    #[serde(skip)]
-    pub content_dir: PathBuf
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -23,7 +21,10 @@ pub struct Basic {
 pub struct Auth {
     pub allow_signup: bool,
     pub edit_requires_auth: bool,
+    pub auth_methods: Vec<String>,
+    pub users_file: String
 }
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Storage {
     #[serde(rename = "type")]
@@ -47,10 +48,6 @@ impl Config {
         let mut config: Config = toml::from_str(&content)
             .expect("Failed to parse mast config");
         
-        config.content_dir = std::env::var("CONTENT_DIR")
-            .map(PathBuf::from)
-            .unwrap_or_else(|_| PathBuf::from("../.wiki/wiki"));
-
         if config.basic.dev_url.is_none() {
             config.basic.dev_url = Some(
                 std::env::var("MAST_URL").unwrap_or_else(|_| "http://localhost:4321".to_string())

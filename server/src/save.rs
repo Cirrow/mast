@@ -1,7 +1,6 @@
-use crate::config;
 
 use axum::{
-    extract::{State},
+    Extension,
     http::StatusCode,
     Json,
 };
@@ -11,8 +10,6 @@ use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use tower_sessions::Session;
 
-use crate::auth::AuthState;
-use crate::db;
 use git2;
 
 #[derive(Deserialize)]
@@ -30,32 +27,19 @@ pub struct SaveResponse {
 
 pub async fn save(
     session: Session,
-    State(state): State<AuthState>,
-    Json(body): Json<SaveRequest>
+    Json(body): Json<SaveRequest>,
+    Extension(cfg): Extension<crate::config::Config>
 ) -> Result<Json<SaveResponse>, (StatusCode, Json<serde_json::Value>)> {
 
-    let cfg: config::Config = config::Config::load();
-
-    let (login, author_email): (String, String) = if cfg.auth.edit_requires_auth {
-        let user_id: Option<i64> = session.get("user_id").await.unwrap();
-        let user_id = user_id.ok_or_else(|| {
-            (StatusCode::UNAUTHORIZED, Json(serde_json::json!({"error": "unauthorized"})))
-        })?;
-
-        let conn = state.db.lock().unwrap();
-        let user = db::get_user(&conn, user_id).ok_or_else(|| {
-            (StatusCode::UNAUTHORIZED, Json(serde_json::json!({"error": "user not found"})))
-        })?;
-        drop(conn);
-
-        let (_id, _github_id, login, _avatar_url, email) = user;
-        let email = email.unwrap_or_else(|| format!("{}@users.noreply.github.com", login));
-        (login, email)
+    let (login, author_email) = if cfg.auth.edit_requires_auth {
+        let username: String = session.get("username").await.unwrap()
+            .ok_or_else(|| (StatusCode::UNAUTHORIZED, Json(serde_json::json!({"error": "unauthorized"}))))?;
+        (username.clone(), format!("{}@localhost", username))
     } else {
         ("guest".to_string(), "guest@localhost".to_string())
     };
 
-    let base = PathBuf::from("../.wiki/wiki");
+    let base = PathBuf::from(&cfg.storage.location);
     let file_path = base.join(format!("{}.txt", body.path));
 
     let canonical = file_path.canonicalize().map_err(|_| {

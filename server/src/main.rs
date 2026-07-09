@@ -1,13 +1,10 @@
 mod config;
 mod pages;
 mod auth;
-mod db;
 mod save;
+mod routes;
 
-use pages::{get_page, get_config};
-
-use std::sync::{Arc, Mutex};
-use rusqlite::Connection;
+use pages::{serve_html_page, serve_raw_page, get_config};
 
 use axum::{Extension, Router, routing::{get, post}, serve, response::Redirect};
 
@@ -26,17 +23,6 @@ async fn main() {
     dotenvy::from_filename("../.env.local").ok();
 
     let cfg: config::Config = config::Config::load();
-    let mast_url: String = cfg.basic.dev_url.clone().unwrap();
-
-     let github_client_id: String = std::env::var("OAUTH_GITHUB_CLIENT_ID")
-        .expect("OAUTH_GITHUB_CLIENT_ID not set");
-    let github_client_secret: String = std::env::var("OAUTH_GITHUB_CLIENT_SECRET")
-        .expect("OAUTH_GITHUB_CLIENT_SECRET not set");
-
-
-    let conn: Connection = db::init_db("../.wiki/auth.db");
-    let db: Arc<Mutex<Connection>> = Arc::new(Mutex::new(conn));
-
 
     let session_store = MemoryStore::default();
     let session_layer = SessionManagerLayer::new(session_store)
@@ -44,29 +30,21 @@ async fn main() {
         .with_name("mast-session")
         .with_same_site(SameSite::Lax);
 
-    let auth_state: auth::AuthState = auth::AuthState {
-        github_client_id,
-        github_client_secret,
-        mast_url,
-        db,
-    };
-
-
     async fn root() -> Redirect {
         Redirect::to("/wiki/home")
     }
 
     let app: Router = Router::new()
-        .route("/api/pages/{*path}", get(get_page))
+        .route("/api/page/{*slug}", get(serve_html_page))
+        .route("/api/raw/{*slug}", get(serve_raw_page))
+        .route("/api/routes", get(routes::get_routes))
         .route("/api/config", get(get_config))
-        .route("/api/auth/github/login", get(auth::login))
-        .route("/api/auth/github/callback", get(auth::CallbackHandler))
+        .route("/api/auth/login", post(auth::login))
         .route("/api/auth/me", get(auth::me))
         .route("/api/auth/logout", post(auth::logout))
         .route("/api/save", post(save::save))
         .route("/", get(root))
         .layer(session_layer)
-        .with_state(auth_state)
         .layer(Extension(cfg))
         .fallback_service(ServeDir::new("../dist/client"));
 

@@ -2,13 +2,11 @@ import { defineConfig } from 'astro/config'
 
 import tailwindcss from '@tailwindcss/vite';
 import svelte from '@astrojs/svelte';
-import node from '@astrojs/node';
 
 
 export default defineConfig({
-  site: 'https://lorearchive.org',
   build: {},
-  output: 'server',
+  output: 'static',
 
   redirects: {
       "/": "/wiki/home"
@@ -23,17 +21,9 @@ export default defineConfig({
     plugins: [tailwindcss()],
     resolve: {
         noExternal: ['bits-ui']
-    },
-    server: {
-        proxy: {
-            '/api': 'http://localhost:3000'
-        }
     }
   },
 
   integrations: [svelte()],
 
-  adapter: node({
-    mode: 'standalone'
-  })
 });

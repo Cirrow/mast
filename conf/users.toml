@@ -1,0 +1,5 @@
+[sudo]
+pwd_hash = ""
+email = ""
+groups = ["admins"]
+userrule = "a"
