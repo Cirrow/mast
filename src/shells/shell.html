@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link href="/styles.css" rel="stylesheet" />
+    <title>Mast</title>
+</head>
+<body class="...">
+
+    <div class="drawer lg:drawer-open">
+        <input id="sidebar-drawer" type="checkbox" class="drawer-toggle" />
+        <div class="drawer-content">
+           
+            <div class="navbar">
+                <label for="sidebar-drawer" class="btn btn-ghost lg:hidden">
+                </label>
+                <span id="wiki-name" class="..."></span>
+                <div class="ml-auto flex gap-2">
+                    <a href="/signin" id="auth-link">Sign in</a>
+                </div>
+            </div>
+            <!-- Content -->
+            <main class="p-4">
+                <div id="mast-content"><!--MAST-CONTENT--></div>
+            </main>
+        </div>
+        <!-- Sidebar -->
+        <div class="drawer-side">
+            <label for="sidebar-drawer" class="drawer-overlay"></label>
+            <ul id="sidebar-tree" class="menu p-4 w-64 min-h-full bg-base-200">
+            </ul>
+        </div>
+    </div>
+    <!-- Inline vanilla JS -->
+    <script>
+        // Header: fetch /api/config, set wiki name, check auth
+        fetch('/api/config').then(r => r.json()).then(cfg => {
+            document.getElementById('wiki-name').textContent = cfg.basic.name
+        })
+        // Auth: fetch /api/auth/me, update auth link
+        fetch('/api/auth/me').then(r => {
+            if (r.ok) {
+                document.getElementById('auth-link').textContent = 'Account'
+                document.getElementById('auth-link').href = '/admin/account'
+            }
+        })
+        // Sidebar: fetch /api/routes, build tree
+        fetch('/api/routes').then(r => r.json()).then(routes => {
+            // build nested <li> tree from flat slug list
+        })
+    </script>
+</body>
+</html>

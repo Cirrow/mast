@@ -3,6 +3,7 @@
 [basic]
 name = "Mast Wiki Engine"
 dev_url = "http://localhost:4321"
+url_directory_prefix = "/wiki/"
 # default_page = 
 # favicon =
 

@@ -15,6 +15,7 @@ pub struct Basic {
     pub image_path: Option<String>,
     pub pinned_pages: Vec<String>,
     pub dev_url: Option<String>,
+    pub url_directory_prefix: Option<String>
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
