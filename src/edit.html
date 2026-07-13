@@ -1,0 +1,39 @@
+<div id="editor-app" class="flex flex-col h-full">
+  <div id="editor-toolbar" class="flex items-center gap-2 p-2 border-b border-base-300">
+    <span id="editor-path" class="text-sm"></span>
+  </div>
+  <textarea id="editor-textarea" class="flex-1 font-mono p-4 resize-none border-0 focus:outline-none bg-base-300/30"></textarea>
+  <div class="flex items-center gap-3 p-2 border-t border-base-300">
+    <button id="save-btn" class="btn btn-primary btn-sm">Save</button>
+    <span id="editor-status" class="text-xs opacity-60"></span>
+  </div>
+</div>
+<script>
+  fetch('/api/auth/me').then(r => { if (!r.ok) window.location.href = '/signin' })
+
+  const params = new URLSearchParams(window.location.search)
+  const pagePath = params.get('path') || 'home'
+  document.getElementById('editor-path').textContent = pagePath
+
+  let currentSha = ''
+  fetch(`/api/raw/${pagePath}`).then(r => r.json()).then(d => {
+    if (d.status === 200) {
+      document.getElementById('editor-textarea').value = d.content
+      currentSha = d.sha
+    }
+  })
+
+  document.getElementById('save-btn').addEventListener('click', () => {
+    const content = document.getElementById('editor-textarea').value
+    const el = document.getElementById('editor-status')
+    el.textContent = 'saving...'
+    fetch('/api/save', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path: pagePath, content, sha: currentSha })
+    }).then(r => {
+      el.textContent = r.ok ? 'saved' : 'error'
+      if (r.ok) currentSha = ''
+    })
+  })
+</script>
