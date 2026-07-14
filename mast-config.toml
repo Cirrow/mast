@@ -3,7 +3,7 @@
 [basic]
 name = "Mast Wiki Engine"
 dev_url = "http://localhost:4321"
-url_directory_prefix = "/wiki/"
+wikipage_directory_prefix = "/wiki/"
 # default_page =
 # favicon =
 
@@ -44,7 +44,7 @@ location = ".wiki/wiki"
 
 # ----- WIKI CUSTOMISATION -----
 [shell]
-shell = "src/shells/shell.html"
+shell = "default"
 
 [typography]
 
