@@ -1,0 +1,23 @@
+<div class="flex">
+    <h1>Log in</h1>
+</div>
+<script>
+  document.getElementById('signin-form').addEventListener('submit', e => {
+    e.preventDefault()
+    const username = document.getElementById('signin-user').value
+    const password = document.getElementById('signin-pass').value
+    const el = document.getElementById('signin-error')
+    el.textContent = ''
+    fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password })
+    }).then(r => {
+      if (r.ok) {
+        window.location.href = '/wiki/home'
+      } else {
+        el.textContent = 'Invalid credentials'
+      }
+    })
+  })
+</script>
