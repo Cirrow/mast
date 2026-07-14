@@ -9,7 +9,6 @@
   </div>
 </div>
 <script>
-  fetch('/api/auth/me').then(r => { if (!r.ok) window.location.href = '/signin' })
 
   const params = new URLSearchParams(window.location.search)
   const pagePath = params.get('path') || 'home'

@@ -49,7 +49,6 @@ async fn main() {
         .route("/", get(root))
         .route("/wiki/{*slug}", get(pages::serve_wiki_page))
         .route("/edit", get(pages::serve_edit_page))
-        .route("/signin", get(auth::login))
         .layer(session_layer)
         .layer(Extension(cfg))
         .fallback_service(ServeDir::new("../dist/client"));
