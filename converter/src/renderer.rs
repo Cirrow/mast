@@ -5,7 +5,6 @@ pub struct Renderer<'a> {
 }
 
 impl<'a> Renderer<'a> {
-
     pub fn new(source: &'a str) -> Self {
         Renderer { source }
     }
@@ -15,14 +14,16 @@ impl<'a> Renderer<'a> {
     }
 
     fn render_children(&self, children: &[Node]) -> String {
-        children.iter().map(|c| self.render_node(c)).collect::<Vec<_>>().concat()
+        children
+            .iter()
+            .map(|c| self.render_node(c))
+            .collect::<Vec<_>>()
+            .concat()
     }
 
     fn render_node(&self, node: &Node) -> String {
         match node.n_type {
-            NodeType::Text => {
-                escape_html(&self.source[node.start..node.end])
-            }
+            NodeType::Text => escape_html(&self.source[node.start..node.end]),
 
             NodeType::Bold => {
                 format!(
@@ -81,9 +82,7 @@ impl<'a> Renderer<'a> {
                 )
             }
 
-            NodeType::Hr => {
-                String::from("<hr class=\"mast-hr\" />")
-            }
+            NodeType::Hr => String::from("<hr class=\"mast-hr\" />"),
 
             NodeType::PseudoHtml => {
                 let detail = node.n_detail.as_deref().unwrap_or("");
@@ -97,13 +96,9 @@ impl<'a> Renderer<'a> {
                 self.render_pseudohtml(tag, attrs, is_self_closing, &node.children)
             }
 
-            NodeType::Linebreak => {
-                String::from("<br class=\"wiki-linebreak\" />")
-            }
+            NodeType::Linebreak => String::from("<br class=\"wiki-linebreak\" />"),
 
-            NodeType::Whitespace => {
-                self.source[node.start..node.end].to_string()
-            }
+            NodeType::Whitespace => self.source[node.start..node.end].to_string(),
 
             NodeType::Paragraph => {
                 format!(
@@ -112,13 +107,17 @@ impl<'a> Renderer<'a> {
                 )
             }
 
-            NodeType::Newline | NodeType::Pipe | NodeType::Eof => {
-                String::new()
-            }
+            NodeType::Newline | NodeType::Pipe | NodeType::Eof => String::new(),
         }
     }
 
-    fn render_pseudohtml(&self, tag: &str, attrs: &str, self_closing: bool, children: &[Node]) -> String {
+    fn render_pseudohtml(
+        &self,
+        tag: &str,
+        attrs: &str,
+        self_closing: bool,
+        children: &[Node],
+    ) -> String {
         match tag {
             "br" => String::from("<br class=\"wiki-br\" />"),
 
@@ -174,22 +173,24 @@ impl<'a> Renderer<'a> {
     }
 
     fn render_flat_text(&self, children: &[Node]) -> String {
-        children.iter().map(|c| {
-            match c.n_type {
+        children
+            .iter()
+            .map(|c| match c.n_type {
                 NodeType::Text => escape_html(c.n_detail.as_deref().unwrap_or("")),
                 NodeType::Whitespace => c.n_detail.as_deref().unwrap_or(" ").to_string(),
                 _ => self.render_flat_text(&c.children),
-            }
-        }).collect::<Vec<_>>().concat()
+            })
+            .collect::<Vec<_>>()
+            .concat()
     }
 }
 
 fn escape_html(s: &str) -> String {
     s.replace('&', "&amp;")
-     .replace('<', "&lt;")
-     .replace('>', "&gt;")
-     .replace('"', "&quot;")
-     .replace('\'', "&#39;")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;")
+        .replace('"', "&quot;")
+        .replace('\'', "&#39;")
 }
 
 fn split_tag_attrs(detail: &str) -> (&str, &str) {
@@ -208,16 +209,15 @@ fn extract_attr<'a>(attrs: &'a str, name: &str) -> Option<String> {
     Some(attrs[value_start..value_start + value_end].to_string())
 }
 
-
 #[cfg(test)]
 mod tests {
     use crate::lexing::Lexer;
     use crate::parser::Parser;
-use crate::renderer::Renderer;
+    use crate::renderer::Renderer;
 
     #[test]
     fn debug_parse() {
-        let input = "**bold** and //italic//";
+        let input = "======heading======";
         let tokens = Lexer::new().tokenise(input);
         let ast = Parser::new().nodeify(&tokens);
         let html = Renderer::new(input).render(&ast);

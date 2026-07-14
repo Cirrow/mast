@@ -2,7 +2,8 @@ use crate::lexing::{Token, TokenType};
 
 #[derive(Debug, PartialEq, Eq, Default, Clone, Copy)]
 pub enum NodeType {
-    #[default] Text,
+    #[default]
+    Text,
     Paragraph,
     Hr,
     Bold,
@@ -27,7 +28,7 @@ pub struct Node {
     pub children: Vec<Node>,
     pub n_detail: Option<String>,
     pub start: usize,
-    pub end: usize
+    pub end: usize,
 }
 
 type Stack = Vec<(NodeType, Vec<Node>, Option<String>)>;
@@ -53,16 +54,66 @@ impl Parser {
                 }
 
                 TokenType::Heading => {
-                    let end: usize = self.line_end(tokens, i + 1);
-                    let content: Vec<Node> = self.inline_parse(&tokens[i + 1..end]);
+                    let open_count = 7 - t.t_detail.as_ref().unwrap().parse::<usize>().unwrap();
+
+                    // find closing
+                    let mut close_count = 0;
+                    let mut content_end = self.line_end(tokens, i + 1);
+                    for j in (i + 1..=content_end).rev() {
+                        if tokens[j].t_type == TokenType::Text {
+                            if let Some(ref d) = tokens[j].t_detail {
+                                if d.chars().all(|c| c == '=') {
+                                    close_count = d.len();
+                                    content_end = j - 1;
+                                    break;
+                                }
+                            }
+                        }
+                        if !matches!(
+                            tokens[j].t_type,
+                            TokenType::Whitespace | TokenType::Newline | TokenType::Eof
+                        ) {
+                            break;
+                        }
+                    }
+
+                    // no closing, demote to plaintext paragraph
+                    if close_count == 0 {
+                        let end = self.para_end(tokens, i);
+                        let equals = "=".repeat(open_count);
+                        let synthetic = Token {
+                            t_type: TokenType::Text,
+                            t_detail: Some(equals),
+                            start: t.start,
+                            end: t.end,
+                        };
+                        let mut content_tokens = vec![synthetic];
+                        content_tokens.extend_from_slice(&tokens[i + 1..end]);
+                        let content = self.inline_parse(&content_tokens);
+                        if !content.is_empty() {
+                            blocks.push(Node {
+                                n_type: NodeType::Paragraph,
+                                children: content,
+                                start: tokens[i].start,
+                                ..Default::default()
+                            });
+                        }
+                        i = end;
+                        continue;
+                    }
+
+                    let effective = std::cmp::min(open_count, close_count);
+                    let level = (7 - effective).to_string();
+                    let content = self.inline_parse(&tokens[i + 1..content_end + 1]);
+
                     blocks.push(Node {
                         n_type: NodeType::Heading,
-                        n_detail: t.t_detail.clone(),
+                        n_detail: Some(level),
                         children: content,
                         start: t.start,
-                        end: t.end
+                        end: t.end,
                     });
-                    i = end + 1;
+                    i = self.line_end(tokens, i + 1) + 1;
                 }
 
                 TokenType::Hr => {
@@ -84,7 +135,7 @@ impl Parser {
                         n_detail: t.t_detail.clone(),
                         children: content,
                         start: t.start,
-                        end: t.end
+                        end: t.end,
                     });
                     i = end + 1;
                 }
@@ -121,8 +172,10 @@ impl Parser {
             let t: &Token = &tokens[i];
 
             match t.t_type {
-
-                TokenType::Text | TokenType::Whitespace | TokenType::Linebreak | TokenType::Newline => {
+                TokenType::Text
+                | TokenType::Whitespace
+                | TokenType::Linebreak
+                | TokenType::Newline => {
                     let node: Node = Self::leaf(t);
                     Self::emit(&mut stack, &mut result, node);
                     i += 1;
@@ -133,16 +186,19 @@ impl Parser {
                     let count: usize = count_in_stack(&stack, nt);
                     if count % 2 == 0 {
                         if i + 1 < tokens.len() && tokens[i + 1].t_type == t.t_type {
-                            Self::emit(&mut stack, &mut result, Node {
-                                start: t.start,
-                                end: tokens[i + 1].end,
-                                ..Default::default()
-                            });
+                            Self::emit(
+                                &mut stack,
+                                &mut result,
+                                Node {
+                                    start: t.start,
+                                    end: tokens[i + 1].end,
+                                    ..Default::default()
+                                },
+                            );
                             i += 2;
                             continue;
                         }
                         stack.push((nt, vec![], None));
-
                     } else {
                         let top_matches: bool = stack
                             .last()
@@ -154,7 +210,12 @@ impl Parser {
                             Self::emit(
                                 &mut stack,
                                 &mut result,
-                                Node { n_type: nt, children, start: t.start, ..Default::default() },
+                                Node {
+                                    n_type: nt,
+                                    children,
+                                    start: t.start,
+                                    ..Default::default()
+                                },
                             );
                         } else {
                             panic!(
@@ -183,26 +244,31 @@ impl Parser {
                         Self::emit(
                             &mut stack,
                             &mut result,
-                            Node { n_type: NodeType::Pipe, ..Default::default() },
+                            Node {
+                                n_type: NodeType::Pipe,
+                                ..Default::default()
+                            },
                         );
-
                     } else {
                         Self::emit(
                             &mut stack,
                             &mut result,
-                            Node { n_type: NodeType::Text, n_detail: Some("|".to_string()), ..Default::default() },
+                            Node {
+                                n_type: NodeType::Text,
+                                n_detail: Some("|".to_string()),
+                                ..Default::default()
+                            },
                         );
                     }
                     i += 1;
                 }
 
                 TokenType::LinkClose => {
-
                     let top_is_link = stack
                         .last()
                         .map(|(nt, _, _)| *nt == NodeType::Link)
                         .unwrap_or(false);
-                    
+
                     if top_is_link {
                         let (_, mut children, _) = stack.pop().unwrap();
                         let pipe_pos = children.iter().position(|n| n.n_type == NodeType::Pipe);
@@ -229,7 +295,13 @@ impl Parser {
                         Self::emit(
                             &mut stack,
                             &mut result,
-                            Node {  n_type: NodeType::Link, children, n_detail: target, start: t.start, end: t.end },
+                            Node {
+                                n_type: NodeType::Link,
+                                children,
+                                n_detail: target,
+                                start: t.start,
+                                end: t.end,
+                            },
                         );
                     } else {
                         panic!("Unmatched LinkClose ]] at pos {}", t.start);
@@ -278,7 +350,7 @@ impl Parser {
                                 children,
                                 n_detail: target,
                                 start: t.start,
-                                end: t.end
+                                end: t.end,
                             },
                         );
                     } else {
@@ -318,8 +390,7 @@ impl Parser {
                 TokenType::PseudoHtml => {
                     let detail = t.t_detail.as_deref().unwrap_or("");
                     if detail.starts_with('/') {
-                        let close_tag =
-                            detail[1..].split_whitespace().next().unwrap_or("");
+                        let close_tag = detail[1..].split_whitespace().next().unwrap_or("");
                         let is_match = stack
                             .last()
                             .map(|(nt, _, tag)| {
@@ -338,14 +409,11 @@ impl Parser {
                                     children,
                                     n_detail: t.t_detail.clone(),
                                     start: t.start,
-                                    end: t.end
+                                    end: t.end,
                                 },
                             );
                         } else {
-                            panic!(
-                                "Unmatched closing </{}> at pos {}",
-                                close_tag, t.start
-                            );
+                            panic!("Unmatched closing </{}> at pos {}", close_tag, t.start);
                         }
                     } else if detail.trim_end().ends_with('/') {
                         Self::emit(
@@ -381,10 +449,7 @@ impl Parser {
                     if !stack.is_empty() {
                         let names: Vec<String> = stack
                             .iter()
-                            .map(|(nt, _, tag)| {
-                                tag.clone()
-                                    .unwrap_or_else(|| format!("{:?}", nt))
-                            })
+                            .map(|(nt, _, tag)| tag.clone().unwrap_or_else(|| format!("{:?}", nt)))
                             .collect();
                         eprintln!("warning: unclosed formatting at EOF: {}", names.join(", "));
                     }
@@ -392,18 +457,16 @@ impl Parser {
                 }
 
                 _ => {
-                    panic!(
-                        "Unexpected token {:?} at pos {}",
-                        t.t_type, t.start
-                    );
+                    panic!("Unexpected token {:?} at pos {}", t.t_type, t.start);
                 }
             }
         }
 
         if !stack.is_empty() {
-            let names: Vec<String> = stack.iter().map(|(nt, _, tag)| {
-                tag.clone().unwrap_or_else(|| format!("{:?}", nt))
-            }).collect();
+            let names: Vec<String> = stack
+                .iter()
+                .map(|(nt, _, tag)| tag.clone().unwrap_or_else(|| format!("{:?}", nt)))
+                .collect();
             eprintln!("warning: unclosed formatting: {}", names.join(", "));
         }
 
@@ -465,11 +528,10 @@ impl Parser {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
-    use crate::lexing::Lexer;
     use super::Parser;
+    use crate::lexing::Lexer;
 
     #[test]
     fn debug_parse() {
