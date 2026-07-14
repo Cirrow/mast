@@ -3,7 +3,7 @@
 # MAST
 
 </div>
-The most customizable, first ever Rust-based wiki engine. 
+The most customizable wiki engine written in rust
 
 
 ## Stack
