@@ -1,6 +1,7 @@
 use axum::{Extension, Json, extract::Path, http::StatusCode, response::Html};
 use chrono;
 use serde::Serialize;
+use std::borrow::Cow;
 use std::path::PathBuf;
 use std::sync::LazyLock;
 use std::sync::OnceLock;
@@ -40,22 +41,35 @@ fn mtime_info(path: &std::path::Path) -> (String, String) {
     }
 }
 
-fn get_shell() -> &'static String {
-    SHELL.get_or_init(|| {
+fn get_shell() -> Cow<'static, str> {
+    if std::env::var("MAST_DEV").is_ok() {
         let path = CFG.base_dir.join(&CFG.shell.shell);
-        std::fs::read_to_string(&path).expect("Failed to load shell")
-    })
+        Cow::Owned(std::fs::read_to_string(&path).expect("Failed to load shell"))
+    } else {
+        Cow::Borrowed(SHELL.get_or_init(|| {
+            let path = CFG.base_dir.join(&CFG.shell.shell);
+            std::fs::read_to_string(&path).expect("Failed to load shell")
+        }))
+    }
 }
 
 fn inject(content: &str) -> String {
     get_shell().replace("<!--MAST-CONTENT-->", content)
 }
 
-pub async fn serve_edit_page() -> Html<String> {
-    let edit_path = CFG.base_dir.join("src/edit.html");
-    let edit_content = std::fs::read_to_string(&edit_path).expect("Failed to load edit.html");
-    let page = inject(&edit_content);
-    Html(page)
+pub async fn serve_static_page(Path(slug): Path<String>) -> Html<String> {
+    let src_path = CFG.base_dir.join("src").join(format!("{slug}.html"));
+
+    let content = match std::fs::read_to_string(&src_path) {
+        Ok(c) => c,
+        Err(_) => {
+            let not_found_path = CFG.base_dir.join("src/404.html");
+            std::fs::read_to_string(not_found_path)
+                .unwrap_or_else(|_| "<h1>404</h1><p>Page not found</p>".to_string())
+        }
+    };
+
+    Html(inject(&content))
 }
 
 pub async fn serve_wiki_page(Path(slug): Path<String>) -> Html<String> {
