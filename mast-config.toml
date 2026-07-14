@@ -4,7 +4,7 @@
 name = "Mast Wiki Engine"
 dev_url = "http://localhost:4321"
 url_directory_prefix = "/wiki/"
-# default_page = 
+# default_page =
 # favicon =
 
 image_as_home = false
@@ -24,6 +24,7 @@ pinned_pages = [""]
 
 [auth]
 allow_signup = true
+edit_requires_auth = false
 users_file = "conf/users.toml"
 auth_methods = ["email", "username"] # supported: ["github", "gitlab", "google", "apple", "facebook"]
 # captcha = true
@@ -32,7 +33,7 @@ auth_methods = ["email", "username"] # supported: ["github", "gitlab", "google",
 # [acl]
 # enable = true
 # anon_perm = "n" # n, r, u, c, d
-# allauth_perm = 
+# allauth_perm =
 
 
 [storage]
@@ -42,6 +43,9 @@ location = ".wiki/wiki"
 
 
 # ----- WIKI CUSTOMISATION -----
+[shell]
+shell = "src/shells/shell.html"
+
 [typography]
 
 [colour]

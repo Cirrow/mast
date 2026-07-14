@@ -1,12 +1,17 @@
+mod auth;
 mod config;
 mod pages;
-mod auth;
-mod save;
 mod routes;
+mod save;
 
-use pages::{serve_html_page, serve_raw_page, get_config};
+use pages::{get_config, serve_html_page, serve_raw_page};
 
-use axum::{Extension, Router, routing::{get, post}, serve, response::Redirect};
+use axum::{
+    Extension, Router,
+    response::Redirect,
+    routing::{get, post},
+    serve,
+};
 
 use tower_http::services::ServeDir;
 use tower_sessions::{MemoryStore, SessionManagerLayer, cookie::SameSite};
@@ -14,11 +19,9 @@ use tower_sessions::{MemoryStore, SessionManagerLayer, cookie::SameSite};
 use std::net::SocketAddr;
 use tokio::net::TcpListener;
 
-
 #[tokio::main]
 
 async fn main() {
-    
     tracing_subscriber::fmt::init();
     dotenvy::from_filename("../.env.local").ok();
 
@@ -26,7 +29,7 @@ async fn main() {
 
     let session_store = MemoryStore::default();
     let session_layer = SessionManagerLayer::new(session_store)
-        .with_secure(false)       // no HTTPS in dev
+        .with_secure(false) // no HTTPS in dev
         .with_name("mast-session")
         .with_same_site(SameSite::Lax);
 
@@ -44,13 +47,16 @@ async fn main() {
         .route("/api/auth/logout", post(auth::logout))
         .route("/api/save", post(save::save))
         .route("/", get(root))
+        .route("/wiki/{*slug}", get(pages::serve_wiki_page))
+        .route("/edit", get(pages::serve_edit_page))
+        .route("/signin", get(auth::login))
         .layer(session_layer)
         .layer(Extension(cfg))
         .fallback_service(ServeDir::new("../dist/client"));
 
-    let addr: SocketAddr = SocketAddr::from(([0,0,0,0], 3000));
+    let addr: SocketAddr = SocketAddr::from(([0, 0, 0, 0], 3000));
     let listener: TcpListener = TcpListener::bind(addr).await.unwrap();
-    
+
     println!("Mast is running on http://{}", addr);
 
     serve(listener, app).await.unwrap();
