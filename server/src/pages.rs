@@ -38,7 +38,7 @@ fn mtime_info(path: &std::path::Path) -> (String, String) {
     }
 }
 
-fn get_shell() -> Cow<'static, str> {
+pub fn get_shell() -> Cow<'static, str> {
     let path = CFG
         .base_dir
         .join("src/shells")
@@ -54,7 +54,7 @@ fn get_shell() -> Cow<'static, str> {
     }
 }
 
-fn inject(content: &str) -> String {
+pub fn inject(content: &str) -> String {
     get_shell().replace("<!--MAST-CONTENT-->", content)
 }
 
