@@ -36,26 +36,8 @@ pub async fn save(
     };
 
     let base = PathBuf::from(&cfg.storage.location);
-    let file_path = base.join(format!("{}.txt", body.path));
-
-    let canonical = file_path.canonicalize().map_err(|_| {
-        (
-            StatusCode::NOT_FOUND,
-            Json(serde_json::json!({"error": "path not found"})),
-        )
-    })?;
-
-    if !canonical.starts_with(&base.canonicalize().map_err(|_| {
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(serde_json::json!({"error": "server error"})),
-        )
-    })?) {
-        return Err((
-            StatusCode::FORBIDDEN,
-            Json(serde_json::json!({"error": "forbidden path"})),
-        ));
-    }
+    let canonical = crate::pages::safe_path(&base, &body.path)
+        .map_err(|s| (s, Json(serde_json::json!({"error": "forbidden path"}))))?;
 
     let current_mtime = std::fs::metadata(&canonical)
         .and_then(|m| m.modified())

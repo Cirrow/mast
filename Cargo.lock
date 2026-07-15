@@ -627,6 +627,7 @@ dependencies = [
  "converter",
  "dotenvy",
  "git2",
+ "http",
  "rand 0.10.1",
  "serde",
  "serde_json",

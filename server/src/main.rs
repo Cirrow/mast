@@ -4,7 +4,7 @@ mod pages;
 mod routes;
 mod save;
 
-use pages::{get_config, serve_html_page, serve_raw_page};
+use pages::{get_config, serve_raw_page};
 
 use axum::{
     Extension, Router,
@@ -38,7 +38,7 @@ async fn main() {
     }
 
     let app: Router = Router::new()
-        .route("/api/page/{*slug}", get(serve_html_page))
+        //api calls
         .route("/api/raw/{*slug}", get(serve_raw_page))
         .route("/api/routes", get(routes::get_routes))
         .route("/api/config", get(get_config))
@@ -46,12 +46,16 @@ async fn main() {
         .route("/api/auth/me", get(auth::me))
         .route("/api/auth/logout", post(auth::logout))
         .route("/api/save", post(save::save))
+        //assets
+        .route("/assets/{*path}", get(pages::serve_asset))
+        //
         .route("/", get(root))
+        //routings
         .route("/wiki/{*slug}", get(pages::serve_wiki_page))
         .route("/{slug}", get(pages::serve_static_page))
+        //layers
         .layer(session_layer)
-        .layer(Extension(cfg))
-        .fallback_service(ServeDir::new("../dist/client"));
+        .layer(Extension(cfg));
 
     let addr: SocketAddr = SocketAddr::from(([0, 0, 0, 0], 3000));
     let listener: TcpListener = TcpListener::bind(addr).await.unwrap();
