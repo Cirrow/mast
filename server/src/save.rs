@@ -2,7 +2,6 @@ use crate::config::CFG;
 use axum::{Json, http::StatusCode};
 use git2;
 use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
 use tower_sessions::Session;
 
 #[derive(Deserialize)]
