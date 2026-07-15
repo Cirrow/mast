@@ -4,10 +4,10 @@
   "version": "0.0.1",
   "scripts": {
     "build": "tailwindcss -i src/styles.css -o dist/client/styles.css && cp src/shell.html dist/client/shell/index.html && cp src/edit.html dist/client/edit/index.html",
-    "dev": "tailwindcss -i src/styles.css -o dist/client/styles.css --watch"
+    "build:css": "npx @tailwindcss/cli -i src/styles.css -o public/output.css",
+    "dev": "(tailwindcss -i src/styles.css -o dist/client/styles.css --watch) & MAST_DEV=1 cargo run"
   },
   "dependencies": {
-    "@floating-ui/dom": "^1.7.6",
     "@tailwindcss/cli": "^4.3.2",
     "tailwindcss": "^4.3.2",
     "typescript": "^6.0.3"

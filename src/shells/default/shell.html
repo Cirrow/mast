@@ -3,21 +3,18 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <link href="/styles.css" rel="stylesheet" />
+    <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg" />
+    <link href="/assets/styles.css" rel="stylesheet" />
     <title>Mast</title>
 </head>
 <body>
-
-    <div class="drawer lg:drawer-open">
-        <div class="drawer-content">
-            <!-- Content -->
+    <div id="mainarea" class="">
+        <div id="contentdiv" class="flex justify-center caret-amber-500">
             <main class="p-4">
                 <div id="mast-content"><!--MAST-CONTENT--></div>
             </main>
         </div>
     </div>
-    <!-- Inline vanilla JS -->
     <script>
         // Header: fetch /api/config, set wiki name, check auth
         fetch('/api/config').then(r => r.json()).then(cfg => {
