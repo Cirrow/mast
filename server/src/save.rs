@@ -1,10 +1,9 @@
-use axum::{Extension, Json, http::StatusCode};
-
+use crate::config::CFG;
+use axum::{Json, http::StatusCode};
+use git2;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use tower_sessions::Session;
-
-use git2;
 
 #[derive(Deserialize)]
 pub struct SaveRequest {
@@ -20,10 +19,9 @@ pub struct SaveResponse {
 
 pub async fn save(
     session: Session,
-    Extension(cfg): Extension<crate::config::Config>,
     Json(body): Json<SaveRequest>,
 ) -> Result<Json<SaveResponse>, (StatusCode, Json<serde_json::Value>)> {
-    let (login, author_email) = if cfg.auth.edit_requires_auth {
+    let (login, author_email) = if CFG.auth.edit_requires_auth {
         let username: String = session.get("username").await.unwrap().ok_or_else(|| {
             (
                 StatusCode::UNAUTHORIZED,
@@ -35,7 +33,7 @@ pub async fn save(
         ("guest".to_string(), "guest@localhost".to_string())
     };
 
-    let base = PathBuf::from(&cfg.storage.location);
+    let base = CFG.base_dir.join(&CFG.storage.location);
     let canonical = crate::pages::safe_path(&base, &body.path)
         .map_err(|s| (s, Json(serde_json::json!({"error": "forbidden path"}))))?;
 
@@ -68,7 +66,7 @@ pub async fn save(
         )
     })?;
 
-    let repo_path: PathBuf = PathBuf::from("..");
+    let repo_path = &CFG.base_dir;
     let repo: git2::Repository = git2::Repository::open(&repo_path).map_err(|_| {
         (
             StatusCode::INTERNAL_SERVER_ERROR,
@@ -83,7 +81,7 @@ pub async fn save(
         )
     })?;
 
-    let rel_path: String = format!("{}/{}.txt", cfg.storage.location, body.path);
+    let rel_path: String = format!("{}/{}.txt", &CFG.storage.location, body.path);
     index
         .add_path(std::path::Path::new(&rel_path))
         .map_err(|_| {

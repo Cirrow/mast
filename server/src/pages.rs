@@ -1,13 +1,12 @@
-use axum::{Extension, Json, extract::Path, http::StatusCode, response::Html};
+use crate::config::CFG;
+use axum::{Json, extract::Path, http::StatusCode, response::Html};
 use chrono;
 use http::header::{CONTENT_TYPE, HeaderMap, HeaderValue};
 use serde::Serialize;
 use std::borrow::Cow;
 use std::path::PathBuf;
-use std::sync::LazyLock;
 use std::sync::OnceLock;
 
-static CFG: LazyLock<crate::config::Config> = LazyLock::new(|| crate::config::Config::load());
 static SHELL: OnceLock<String> = OnceLock::new();
 
 #[derive(Serialize)]
@@ -81,7 +80,7 @@ pub async fn serve_wiki_page(Path(slug): Path<String>) -> Result<Html<String>, S
 }
 
 pub async fn serve_raw_page(Path(slug): Path<String>) -> Result<Json<RawPageResponse>, StatusCode> {
-    let base = PathBuf::from(&CFG.storage.location);
+    let base = CFG.base_dir.join(&CFG.storage.location);
     let file_path = safe_path(&base, &format!("{}.txt", slug))?;
 
     match std::fs::read_to_string(&file_path) {
@@ -99,12 +98,6 @@ pub async fn serve_raw_page(Path(slug): Path<String>) -> Result<Json<RawPageResp
             status: StatusCode::NOT_FOUND.as_u16(),
         })),
     }
-}
-
-pub async fn get_config(
-    Extension(cfg): Extension<crate::config::Config>,
-) -> Json<crate::config::Config> {
-    Json(cfg)
 }
 
 pub async fn serve_asset(Path(path): Path<String>) -> Result<(HeaderMap, Vec<u8>), StatusCode> {

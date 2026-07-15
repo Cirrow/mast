@@ -1,5 +1,8 @@
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
+use std::sync::LazyLock;
+
+pub static CFG: LazyLock<Config> = LazyLock::new(|| Config::load());
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Config {

@@ -1,8 +1,9 @@
-use axum::{Extension, http::StatusCode, response::IntoResponse, Json};
-use serde::{Deserialize, Serialize};
-use tower_sessions::Session;
+use crate::config::CFG;
 use argon2::{Argon2, PasswordHash, PasswordVerifier};
+use axum::{Json, http::StatusCode, response::IntoResponse};
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use tower_sessions::Session;
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct User {
@@ -26,8 +27,8 @@ pub struct UserInfo {
     pub userrule: String,
 }
 
-fn load_users(cfg: &crate::config::Config) -> HashMap<String, User> {
-    let path = std::path::PathBuf::from(&cfg.auth.users_file);
+fn load_users() -> HashMap<String, User> {
+    let path = CFG.base_dir.join(&CFG.auth.users_file);
     std::fs::read_to_string(&path)
         .ok()
         .and_then(|c| toml::from_str(&c).ok())
@@ -36,12 +37,12 @@ fn load_users(cfg: &crate::config::Config) -> HashMap<String, User> {
 
 pub async fn login(
     session: Session,
-    Extension(cfg): Extension<crate::config::Config>,
     Json(body): Json<LocalLoginRequest>,
 ) -> Result<Json<UserInfo>, (StatusCode, Json<serde_json::Value>)> {
     // Resolve email input to a username
     let username = if body.username.contains('@') {
-        load_users(&cfg).iter()
+        load_users()
+            .iter()
             .find(|(_, u)| u.email.as_deref() == Some(&body.username))
             .map(|(n, _)| n.clone())
             .ok_or_else(|| unauthorized())?
@@ -49,13 +50,16 @@ pub async fn login(
         body.username.clone()
     };
 
-    let users = load_users(&cfg);
+    let users = load_users();
     let user = users.get(&username).ok_or_else(unauthorized)?;
 
     let hash = user.pwd_hash.as_ref().ok_or_else(unauthorized)?;
     let parsed = PasswordHash::new(hash).map_err(|_| server_error())?;
 
-    if Argon2::default().verify_password(body.password.as_bytes(), &parsed).is_err() {
+    if Argon2::default()
+        .verify_password(body.password.as_bytes(), &parsed)
+        .is_err()
+    {
         return Err(unauthorized());
     }
 
@@ -63,13 +67,10 @@ pub async fn login(
     Ok(Json(user_to_info(username, user)))
 }
 
-pub async fn me(
-    session: Session,
-    Extension(cfg): Extension<crate::config::Config>,
-) -> Result<Json<UserInfo>, StatusCode> {
+pub async fn me(session: Session) -> Result<Json<UserInfo>, StatusCode> {
     let username: Option<String> = session.get("username").await.unwrap();
     let username = username.ok_or(StatusCode::UNAUTHORIZED)?;
-    let users = load_users(&cfg);
+    let users = load_users();
     let user = users.get(&username).ok_or(StatusCode::UNAUTHORIZED)?;
     Ok(Json(user_to_info(username, user)))
 }
@@ -80,11 +81,17 @@ pub async fn logout(session: Session) -> impl IntoResponse {
 }
 
 fn unauthorized() -> (StatusCode, Json<serde_json::Value>) {
-    (StatusCode::UNAUTHORIZED, Json(serde_json::json!({"error": "invalid credentials"})))
+    (
+        StatusCode::UNAUTHORIZED,
+        Json(serde_json::json!({"error": "invalid credentials"})),
+    )
 }
 
 fn server_error() -> (StatusCode, Json<serde_json::Value>) {
-    (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": "server error"})))
+    (
+        StatusCode::INTERNAL_SERVER_ERROR,
+        Json(serde_json::json!({"error": "server error"})),
+    )
 }
 
 fn user_to_info(username: String, user: &User) -> UserInfo {

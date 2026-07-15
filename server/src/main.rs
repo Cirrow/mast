@@ -3,7 +3,7 @@ mod config;
 mod pages;
 mod routes;
 mod save;
-use pages::{get_config, serve_raw_page};
+use pages::serve_raw_page;
 
 use axum::{
     Extension, Router,
@@ -38,7 +38,6 @@ async fn main() {
         //api calls
         .route("/api/raw/{*slug}", get(serve_raw_page))
         .route("/api/routes", get(routes::get_routes))
-        .route("/api/config", get(get_config))
         .route("/api/auth/login", post(auth::login))
         .route("/api/auth/me", get(auth::me))
         .route("/api/auth/logout", post(auth::logout))

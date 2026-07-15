@@ -1,4 +1,5 @@
-use axum::{Extension, Json};
+use crate::config::CFG;
+use axum::Json;
 use std::path::Path;
 
 fn collect(dir: &Path, prefix: &str, routes: &mut Vec<String>) {
@@ -28,14 +29,12 @@ fn collect(dir: &Path, prefix: &str, routes: &mut Vec<String>) {
     }
 }
 
-pub async fn get_routes(
-    Extension(cfg): Extension<crate::config::Config>,
-) -> Json<Vec<String>> {
+pub async fn get_routes() -> Json<Vec<String>> {
     let mut routes: Vec<String> = Vec::new();
-    let wiki_dir = std::path::PathBuf::from(&cfg.storage.location);
-    
+    let wiki_dir = CFG.base_dir.join(&CFG.storage.location);
+
     collect(&wiki_dir, "", &mut routes);
     routes.sort();
-    
+
     Json(routes)
 }
