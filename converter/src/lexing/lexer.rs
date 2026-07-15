@@ -159,7 +159,6 @@ impl Lexer {
             end: input.len(),
             ..Default::default()
         });
-        start_of_line = true;
 
         tokens
     }
