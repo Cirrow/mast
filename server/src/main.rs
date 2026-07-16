@@ -52,8 +52,7 @@ async fn main() {
         .route("/wiki/{*slug}", get(pages::serve_wiki_page))
         .route("/{slug}", get(pages::serve_static_page))
         //layers
-        .layer(session_layer)
-        .layer(Extension(cfg));
+        .layer(session_layer);
 
     let addr: SocketAddr = SocketAddr::from(([0, 0, 0, 0], 3000));
     let listener: TcpListener = TcpListener::bind(addr).await.unwrap();
