@@ -1,5 +1,6 @@
 mod auth;
 mod config;
+mod install;
 mod pages;
 mod routes;
 mod save;
@@ -46,6 +47,7 @@ async fn main() {
         .route("/assets/{*path}", get(pages::serve_asset))
         //
         .route("/", get(root))
+        .route("/install", get(install::serve_install_page))
         //routings
         .route("/wiki/{*slug}", get(pages::serve_wiki_page))
         .route("/{slug}", get(pages::serve_static_page))
