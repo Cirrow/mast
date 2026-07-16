@@ -218,11 +218,19 @@ impl Parser {
                                 },
                             );
                         } else {
-                            panic!(
-                                "Overlapping formatting: {:?} opened inside {:?} at pos {}",
-                                nt,
-                                stack.last().map(|(n, _, _)| n).unwrap(),
-                                t.start
+                            eprintln!("warning: overlapping formatting at pos {}", t.start);
+                            let (_, _, _) = stack.pop().unwrap();
+                            // The closing token becomes text
+                            Self::emit(
+                                &mut stack,
+                                &mut result,
+                                Node {
+                                    n_type: NodeType::Text,
+                                    n_detail: Some(t.t_detail.clone().unwrap_or_default()),
+                                    start: t.start,
+                                    end: t.end,
+                                    ..Default::default()
+                                },
                             );
                         }
                     }

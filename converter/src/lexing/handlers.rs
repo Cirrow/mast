@@ -305,7 +305,12 @@ impl Handler for PseudoHTMLHandler {
                 _ => {}
             }
         }
-        unreachable!("handle() called but matching closing bracket was not found")
+        Token {
+            t_type: TokenType::Text,
+            t_detail: Some("<".to_string()),
+            start: cursor.pos,
+            end: cursor.pos + 1,
+        }
     }
 }
 
