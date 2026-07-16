@@ -20,7 +20,7 @@ pub async fn save(
     session: Session,
     Json(body): Json<SaveRequest>,
 ) -> Result<Json<SaveResponse>, (StatusCode, Json<serde_json::Value>)> {
-    let (login, author_email) = if CFG.auth.edit_requires_auth {
+    let (login, author_email) = {
         let username: String = session.get("username").await.unwrap().ok_or_else(|| {
             (
                 StatusCode::UNAUTHORIZED,
@@ -28,8 +28,6 @@ pub async fn save(
             )
         })?;
         (username.clone(), format!("{}@localhost", username))
-    } else {
-        ("guest".to_string(), "guest@localhost".to_string())
     };
 
     let base = CFG.base_dir.join(&CFG.storage.location);
