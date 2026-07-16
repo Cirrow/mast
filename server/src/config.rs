@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 use std::sync::LazyLock;
 
@@ -20,16 +21,17 @@ pub struct Basic {
     pub image_as_home: bool,
     pub image_path: Option<String>,
     pub pinned_pages: Vec<String>,
-    pub dev_url: Option<String>,
     pub wikipage_directory_prefix: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Auth {
     pub allow_signup: bool,
-    pub edit_requires_auth: bool,
     pub auth_methods: Vec<String>,
     pub users_file: String,
+    #[serde(default)]
+    pub username_signup_requires_email: bool,
+    pub base_user_permissions: HashSet<char>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -58,12 +60,6 @@ impl Config {
         let mut config: Config = toml::from_str(&content).expect("Failed to parse mast config");
 
         config.base_dir = config_path.parent().unwrap_or(Path::new(".")).to_path_buf();
-
-        if config.basic.dev_url.is_none() {
-            config.basic.dev_url = Some(
-                std::env::var("MAST_URL").unwrap_or_else(|_| "http://localhost:4321".to_string()),
-            )
-        }
         config
     }
 }

@@ -1,51 +1,21 @@
 # ----- WIKI SETUP -----
-
 [basic]
 name = "Mast Wiki Engine"
-dev_url = "http://localhost:4321"
 wikipage_directory_prefix = "/wiki/"
-# default_page =
-# favicon =
-
 image_as_home = false
-#image_path
-
-# [header]
 pinned_pages = [""]
-
-
-# [sidebar]
-# enable = true
-# collapsible = true
-# hide_pages = []
-# pinned_pages = []
-# auto_open_on_load = true
-
 
 [auth]
 allow_signup = true
-edit_requires_auth = false
 users_file = "conf/users.toml"
-auth_methods = ["email", "username"] # supported: ["github", "gitlab", "google", "apple", "facebook"]
-# captcha = true
-# captcha_method =
-
-# [acl]
-# enable = true
-# anon_perm = "n" # n, r, u, c, d
-# allauth_perm =
-
+auth_methods = ["username"] # supported: ["github", "gitlab", "google", "apple", "facebook"]
+username_signup_requires_email = true
+base_user_permissions = ["r"] # rucdas - read, update, create, delete, admin, sudo.
 
 [storage]
 type = "local_git"
 location = ".wiki/wiki"
 
-
-
 # ----- WIKI CUSTOMISATION -----
 [shell]
 shell = "default"
-
-[typography]
-
-[colour]
