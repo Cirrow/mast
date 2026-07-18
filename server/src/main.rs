@@ -8,7 +8,7 @@ use pages::serve_raw_page;
 
 use axum::{
     Extension, Router,
-    response::Redirect,
+    response::{IntoResponse, Redirect},
     routing::{get, post},
     serve,
 };
@@ -18,12 +18,10 @@ use tokio::net::TcpListener;
 use tower_sessions::{MemoryStore, SessionManagerLayer, cookie::SameSite};
 
 #[tokio::main]
-
 async fn main() {
     tracing_subscriber::fmt::init();
     dotenvy::from_filename("../.env.local").ok();
-
-    let cfg: config::Config = config::Config::load();
+    config::init();
 
     let session_store = MemoryStore::default();
     let session_layer = SessionManagerLayer::new(session_store)
@@ -47,12 +45,16 @@ async fn main() {
         .route("/assets/{*path}", get(pages::serve_asset))
         //
         .route("/", get(root))
-        .route("/install", get(install::serve_install_page))
+        .route(
+            "/install",
+            get(install::serve_install_page).post(install::handle_install),
+        )
         //routings
         .route("/wiki/{*slug}", get(pages::serve_wiki_page))
         .route("/{slug}", get(pages::serve_static_page))
         //layers
-        .layer(session_layer);
+        .layer(session_layer)
+        .layer(axum::middleware::from_fn(install_guard));
 
     let addr: SocketAddr = SocketAddr::from(([0, 0, 0, 0], 3000));
     let listener: TcpListener = TcpListener::bind(addr).await.unwrap();
@@ -60,4 +62,20 @@ async fn main() {
     println!("Mast is running on http://{}", addr);
 
     serve(listener, app).await.unwrap();
+
+    async fn install_guard(
+        uri: axum::http::Uri,
+        req: axum::http::Request,
+        next: axum::middleware::Next,
+    ) -> impl IntoResponse {
+        let path = uri.path();
+        if path.starts_with("/install") || path.starts_with("/assets") {
+            return next.run(req).await.into_response();
+        }
+        if !config::initcheck() {
+            // <-- just reads the flag
+            return Redirect::to("/install").into_response();
+        }
+        next.run(req).await.into_response()
+    }
 }

@@ -6,11 +6,10 @@ image_as_home = false
 pinned_pages = [""]
 
 [auth]
-allow_signup = true
 users_file = "conf/users.toml"
-auth_methods = ["username"] # supported: ["github", "gitlab", "google", "apple", "facebook"]
+auth_methods = ["username"] # supported: ["github", "gitlab", "google", "apple", "facebook"]. If empty, users cannot register.
 username_signup_requires_email = true
-base_user_permissions = ["r"] # rucdas - read, update, create, delete, admin, sudo.
+base_user_permission = "r" # rucdas - read, update, create, delete, admin, sudo.
 
 [storage]
 type = "local_git"
