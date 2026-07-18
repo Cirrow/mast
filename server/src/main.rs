@@ -7,7 +7,7 @@ mod save;
 use pages::serve_raw_page;
 
 use axum::{
-    Extension, Router,
+    Router,
     response::{IntoResponse, Redirect},
     routing::{get, post},
     serve,
@@ -65,7 +65,7 @@ async fn main() {
 
     async fn install_guard(
         uri: axum::http::Uri,
-        req: axum::http::Request,
+        req: axum::extract::Request,
         next: axum::middleware::Next,
     ) -> impl IntoResponse {
         let path = uri.path();
