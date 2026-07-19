@@ -1,4 +1,4 @@
-use crate::config::CFG;
+use crate::config::{self, CFG};
 use axum::{Json, extract::Path, http::StatusCode, response::Html};
 use chrono;
 use http::header::{CONTENT_TYPE, HeaderMap, HeaderValue};
@@ -39,11 +39,13 @@ fn mtime_info(path: &std::path::Path) -> (String, String) {
 }
 
 pub fn get_shell() -> Cow<'static, str> {
-    let path = CFG
-        .base_dir
-        .join("src/shells")
-        .join(&CFG.shell.shell)
-        .join("shell.html");
+    let base = crate::config::base_dir();
+    let shell = if config::initcheck() {
+        CFG.shell.shell.clone()
+    } else {
+        "default".to_string()
+    };
+    let path = base.join("src/shells").join(&shell).join("shell.html");
 
     if std::env::var("MAST_DEV").is_ok() {
         Cow::Owned(std::fs::read_to_string(&path).expect("Failed to load shell"))
@@ -101,8 +103,9 @@ pub async fn serve_raw_page(Path(slug): Path<String>) -> Result<Json<RawPageResp
 }
 
 pub async fn serve_asset(Path(path): Path<String>) -> Result<(HeaderMap, Vec<u8>), StatusCode> {
-    let canonical = safe_path(&CFG.base_dir.join("dist/client"), &path)
-        .or_else(|_| safe_path(&CFG.base_dir.join("public"), &path))?;
+    let base = config::base_dir();
+    let canonical = safe_path(&base.join("dist/client"), &path)
+        .or_else(|_| safe_path(&base.join("public"), &path))?;
 
     let mime = match path.rsplit('.').next() {
         Some("css") => "text/css",

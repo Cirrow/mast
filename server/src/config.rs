@@ -68,13 +68,20 @@ pub struct Shell {
     pub shell: String,
 }
 
+pub fn base_dir() -> PathBuf {
+    config_path()
+        .parent()
+        .unwrap_or(Path::new("."))
+        .to_path_buf()
+}
+
 impl Config {
     pub fn load() -> Self {
         let config_path = config_path();
         let content = std::fs::read_to_string(&config_path).expect("mast-config.toml not found");
         let mut config: Config = toml::from_str(&content).expect("Failed to parse mast config");
 
-        config.base_dir = config_path.parent().unwrap_or(Path::new(".")).to_path_buf();
+        config.base_dir = base_dir();
         config
     }
 }
