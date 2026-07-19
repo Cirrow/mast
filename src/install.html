@@ -1,0 +1,159 @@
+<div class="flex justify-center items-center min-h-[80vh]">
+    <div class="card w-full max-w-lg bg-base-200 shadow-xl">
+        <div class="card-body">
+            <h2 class="card-title text-2xl mb-4">Mast Wiki Installer</h2>
+            <p>The Mast Wiki installation helper. The installer runs when the engine can't find the mast-config.html file in the installation directory. And don't worry, you can change all of these settings later - or add extra features!</p>
+            <p>If there is anything you are unsure about, consult the documentation or ask your administrator.</p>
+
+
+
+            <!-- Error banner -->
+            <div id="error-banner" class="alert alert-error mb-4 hidden">
+                <span id="error-message"></span>
+            </div>
+
+            <form method="POST" action="/install">
+                <!-- Site Name -->
+                <div class="form-control mb-3">
+                    <label class="label">
+                        <span class="label-text">Site Name</span>
+                    </label>
+                    <input type="text" name="site_name" placeholder="My Wiki"
+                        class="input input-bordered w-full" required />
+            </div>
+
+                <!-- Admin Username -->
+                <div class="form-control mb-3">
+                    <label class="label">
+                        <span class="label-text">Admin Username</span>
+                    </label>
+                    <input type="text" name="sudo_username" placeholder="admin"
+                        class="input input-bordered w-full" required />
+                </div>
+
+                <!-- Admin Email -->
+                <div class="form-control mb-3">
+                    <label class="label">
+                        <span class="label-text">Admin Email</span>
+                    </label>
+                    <input type="email" name="sudo_email" placeholder="admin@example.com"
+                        class="input input-bordered w-full" required />
+                </div>
+
+                <!-- Password -->
+                <div class="form-control mb-3">
+                    <label class="label">
+                        <span class="label-text">Password</span>
+                    </label>
+                    <input type="password" name="sudo_pwd"
+                        class="input input-bordered w-full" required />
+                </div>
+
+                <!-- Confirm Password -->
+                <div class="form-control mb-3">
+                    <label class="label">
+                        <span class="label-text">Confirm Password</span>
+                    </label>
+                    <input type="password" name="sudo_pwd_confirm"
+                        class="input input-bordered w-full" required />
+                </div>
+
+                <!-- ACL Policy -->
+                <fieldset class="fieldset mb-3">
+                    <legend class="fieldset-legend">ACL Policy</legend>
+                    <div class="flex gap-4">
+                        <label class="label cursor-pointer gap-2">
+                            <input type="radio" name="acl_policy" value="open"
+                                class="radio radio-primary" checked />
+                            <span class="label-text">Open</span>
+                        </label>
+                        <label class="label cursor-pointer gap-2">
+                            <input type="radio" name="acl_policy" value="public"
+                                class="radio radio-primary" />
+                            <span class="label-text">Public</span>
+                        </label>
+                        <label class="label cursor-pointer gap-2">
+                            <input type="radio" name="acl_policy" value="private"
+                                class="radio radio-primary" />
+                            <span class="label-text">Private</span>
+                        </label>
+                    </div>
+                </fieldset>
+
+                <!-- Auth Methods -->
+                <fieldset class="fieldset mb-3">
+                    <legend class="fieldset-legend">Auth Methods</legend>
+                    <div class="flex flex-wrap gap-4">
+                        <label class="label cursor-pointer gap-2">
+                            <input type="checkbox" name="auth_methods" value="username"
+                                class="checkbox checkbox-primary" checked />
+                            <span class="label-text">Username</span>
+                        </label>
+                        <label class="label cursor-pointer gap-2">
+                            <input type="checkbox" name="auth_methods" value="github"
+                                class="checkbox checkbox-primary" />
+                            <span class="label-text">GitHub</span>
+                        </label>
+                        <label class="label cursor-pointer gap-2">
+                            <input type="checkbox" name="auth_methods" value="gitlab"
+                                class="checkbox checkbox-primary" />
+                            <span class="label-text">GitLab</span>
+                        </label>
+                        <label class="label cursor-pointer gap-2">
+                            <input type="checkbox" name="auth_methods" value="google"
+                                class="checkbox checkbox-primary" />
+                            <span class="label-text">Google</span>
+                        </label>
+                        <label class="label cursor-pointer gap-2">
+                            <input type="checkbox" name="auth_methods" value="apple"
+                                class="checkbox checkbox-primary" />
+                            <span class="label-text">Apple</span>
+                        </label>
+                        <label class="label cursor-pointer gap-2">
+                            <input type="checkbox" name="auth_methods" value="facebook"
+                                class="checkbox checkbox-primary" />
+                            <span class="label-text">Facebook</span>
+                        </label>
+                    </div>
+                </fieldset>
+
+                <!-- Storage Type -->
+                <fieldset class="fieldset mb-4">
+                    <legend class="fieldset-legend">Storage</legend>
+                    <div class="flex gap-4">
+                        <label class="label cursor-pointer gap-2">
+                            <input type="radio" name="storage_type" value="local"
+                                class="radio radio-primary" checked />
+                            <span class="label-text">Local Git</span>
+                        </label>
+                        <label class="label cursor-pointer gap-2">
+                            <input type="radio" name="storage_type" value="remote_git"
+                                class="radio radio-primary" />
+                            <span class="label-text">Remote Git</span>
+                        </label>
+                    </div>
+                </fieldset>
+
+                <!-- Submit -->
+                <button type="submit" class="btn btn-primary w-full">
+                    Install
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    const params = new URLSearchParams(window.location.search)
+    const error = params.get('error')
+    if (error) {
+        const banner = document.getElementById('error-banner')
+        const message = document.getElementById('error-message')
+        const messages = {
+            'missing_fields': 'Please fill in all required fields.',
+            'password_mismatch': 'Passwords do not match.',
+        }
+        message.textContent = messages[error] || error
+        banner.classList.remove('hidden')
+    }
+</script>
