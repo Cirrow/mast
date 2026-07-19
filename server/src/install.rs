@@ -5,7 +5,7 @@ use argon2::{
     password_hash::{PasswordHasher, SaltString, rand_core::OsRng},
 };
 use axum::response::{Html, IntoResponse, Redirect};
-use serde::Deserialize;
+use serde::{Deserialize, Deserializer};
 use std::fs;
 use std::sync::atomic::Ordering;
 
@@ -17,9 +17,32 @@ pub struct InstallRequest {
     pub sudo_pwd: String,
     pub sudo_pwd_confirm: String,
     pub acl_policy: String, // "open", "public", "private"
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_one_or_many")]
     pub auth_methods: Vec<String>, //  # supported: ["username", "github", "gitlab", "google", "apple", "facebook"]. If empty, users cannot register.
     pub storage_type: String,
+}
+
+fn deserialize_one_or_many<'de, D>(deserializer: D) -> Result<Vec<String>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    use serde::de::{self, SeqAccess, Visitor};
+    use std::fmt;
+
+    struct V;
+    impl<'de> Visitor<'de> for V {
+        type Value = Vec<String>;
+        fn expecting(&self, f: &mut fmt::Formatter) -> fmt::Result {
+            write!(f, "string or sequence")
+        }
+        fn visit_str<E: de::Error>(self, v: &str) -> Result<Vec<String>, E> {
+            Ok(vec![v.to_string()])
+        }
+        fn visit_seq<A: SeqAccess<'de>>(self, a: A) -> Result<Vec<String>, A::Error> {
+            Vec::deserialize(de::value::SeqAccessDeserializer::new(a))
+        }
+    }
+    deserializer.deserialize_any(V)
 }
 
 pub async fn serve_install_page() -> impl IntoResponse {
