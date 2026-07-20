@@ -1,11 +1,8 @@
-<div class="flex justify-center items-center min-h-[80vh]">
-    <div class="card w-full max-w-lg bg-base-200 shadow-xl">
+
+<div class="grid grid-cols-2 gap-6 justify-center items-start min-h-full">
+    <div class="bg-base-200 shadow-xl">
         <div class="card-body">
             <h2 class="card-title text-2xl mb-4">Mast Wiki Installer</h2>
-            <p>The Mast Wiki installation helper. The installer runs when the engine can't find the mast-config.html file in the installation directory. And don't worry, you can change all of these settings later - or add extra features!</p>
-            <p>If there is anything you are unsure about, consult the documentation or ask your administrator.</p>
-
-
 
             <!-- Error banner -->
             <div id="error-banner" class="alert alert-error mb-4 hidden">
@@ -83,38 +80,53 @@
                 <!-- Auth Methods -->
                 <fieldset class="fieldset mb-3">
                     <legend class="fieldset-legend">Auth Methods</legend>
-                    <div class="flex flex-wrap gap-4">
-                        <label class="label cursor-pointer gap-2">
-                            <input type="checkbox" name="auth_methods" value="username"
-                                class="checkbox checkbox-primary" checked />
-                            <span class="label-text">Username</span>
-                        </label>
-                        <label class="label cursor-pointer gap-2">
-                            <input type="checkbox" name="auth_methods" value="github"
-                                class="checkbox checkbox-primary" />
-                            <span class="label-text">GitHub</span>
-                        </label>
-                        <label class="label cursor-pointer gap-2">
-                            <input type="checkbox" name="auth_methods" value="gitlab"
-                                class="checkbox checkbox-primary" />
-                            <span class="label-text">GitLab</span>
-                        </label>
-                        <label class="label cursor-pointer gap-2">
-                            <input type="checkbox" name="auth_methods" value="google"
-                                class="checkbox checkbox-primary" />
-                            <span class="label-text">Google</span>
-                        </label>
-                        <label class="label cursor-pointer gap-2">
-                            <input type="checkbox" name="auth_methods" value="apple"
-                                class="checkbox checkbox-primary" />
-                            <span class="label-text">Apple</span>
-                        </label>
-                        <label class="label cursor-pointer gap-2">
-                            <input type="checkbox" name="auth_methods" value="facebook"
-                                class="checkbox checkbox-primary" />
-                            <span class="label-text">Facebook</span>
-                        </label>
+
+                    <div class="grid grid-cols-5 grid-rows-5 gap-4">
+                        <div >
+                            <label class="label cursor-pointer gap-2">
+                                <input type="checkbox" name="auth_methods" value="username"
+                                    class="checkbox checkbox-primary" checked />
+                                <span class="label-text">Username</span>
+                            </label>
+                        </div>
+                        <div class="col-start-1 row-start-2">
+                            <label class="label cursor-pointer gap-2">
+                                <input type="checkbox" name="auth_methods" value="github"
+                                    class="checkbox checkbox-primary" />
+                                <span class="label-text">GitHub</span>
+                            </label>
+                        </div>
+                        <div class="col-start-2 row-start-1">
+
+                            <label class="label cursor-pointer gap-2">
+                                <input type="checkbox" name="auth_methods" value="gitlab"
+                                    class="checkbox checkbox-primary" />
+                                <span class="label-text">GitLab</span>
+                            </label>
+                        </div>
+                        <div class="col-start-2 row-start-2">
+                            <label class="label cursor-pointer gap-2">
+                                <input type="checkbox" name="auth_methods" value="google"
+                                    class="checkbox checkbox-primary" />
+                                <span class="label-text">Google</span>
+                            </label>
+                        </div>
+                        <div class="col-start-3 row-start-1">
+                            <label class="label cursor-pointer gap-2">
+                                <input type="checkbox" name="auth_methods" value="apple"
+                                    class="checkbox checkbox-primary" />
+                                <span class="label-text">Apple</span>
+                            </label>
+                        </div>
+                        <div class="row-start-2">
+                            <label class="label cursor-pointer gap-2">
+                                <input type="checkbox" name="auth_methods" value="facebook"
+                                    class="checkbox checkbox-primary" />
+                                <span class="label-text">Facebook</span>
+                            </label>
+                        </div>
                     </div>
+
                 </fieldset>
 
                 <!-- Storage Type -->
@@ -139,6 +151,13 @@
                     Install
                 </button>
             </form>
+        </div>
+    </div>
+
+    <div class="card bg-base-200 shadow-xl">
+        <div class="card-body">
+            <p>The Mast Wiki installation helper. The installer runs when the engine can't find the mast-config.toml file in the installation directory. And don't worry, you can change all of these settings later - or add extra features!</p>
+            <p>If there is anything you are unsure about, consult the documentation or ask your administrator.</p>
         </div>
     </div>
 </div>
