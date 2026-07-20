@@ -9,4 +9,13 @@ Mast is a beautiful, free and open-source wiki engine written in Rust.
 
 Mast has been under development since mid-2026, and so its localisation/security/plugin ecosystem may not be as mature as other wiki engines.
 
+## Development
+Run
+```bash
+MAST_DEV=1 cargo run
+```
+
+in the home directory to start the dev server. The default port is `:3000` however this is configurable later through the config.
+
+
 Made with ❤️ by Cieron in 🇳🇿
