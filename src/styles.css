@@ -5,5 +5,5 @@
 }
 
 
-@source "../src/shells";
+@source "./shells";
 @source "./install.html";
