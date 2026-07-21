@@ -225,7 +225,7 @@ impl<'a> Renderer<'a> {
         children
             .iter()
             .map(|c| match c.n_type {
-                NodeType::Text => escape_html(c.n_detail.as_deref().unwrap_or("")),
+                NodeType::Text => escape_html(&self.source[c.start..c.end]),
                 NodeType::Whitespace => c.n_detail.as_deref().unwrap_or(" ").to_string(),
                 _ => self.render_flat_text(&c.children),
             })
