@@ -10,6 +10,7 @@
   "dependencies": {
     "@tailwindcss/cli": "^4.3.2",
     "@tailwindcss/typography": "^0.5.20",
+    "flyonui": "^2.4.1",
     "tailwindcss": "^4.3.2",
     "typescript": "^6.0.3"
   },

@@ -1,5 +1,9 @@
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
-@plugin "daisyui" {
+@plugin "flyonui" {
     themes: light --default, synthwave;
 }
+
+
+@source "../src/shells";
+@source "./install.html";

@@ -57,9 +57,15 @@ pub fn get_shell() -> Cow<'static, str> {
 }
 
 pub fn inject(content: &str, toc: &str) -> String {
+    let (clean, inline_toc) = extract_inline_toc(content);
+    let final_toc = if inline_toc.is_empty() {
+        toc
+    } else {
+        &inline_toc
+    };
     get_shell()
-        .replace("<!--MAST-CONTENT-->", content)
-        .replace("<!--MAST-TOC-->", toc)
+        .replace("<!--MAST-CONTENT-->", &clean)
+        .replace("<!--MAST-TOC-->", final_toc)
 }
 
 pub async fn serve_static_page(Path(slug): Path<String>) -> Result<Html<String>, StatusCode> {
@@ -72,6 +78,18 @@ pub async fn serve_static_page(Path(slug): Path<String>) -> Result<Html<String>,
     });
 
     Ok(Html(inject(&content, "")))
+}
+
+fn extract_inline_toc(content: &str) -> (String, String) {
+    let start = "<!--MAST-TOC-CONTENT-->";
+    let end = "<!--/MAST-TOC-CONTENT-->";
+    if let (Some(s), Some(e)) = (content.find(start), content.find(end)) {
+        let toc = content[s + start.len()..e].trim().to_string();
+        let clean = format!("{}{}", &content[..s], &content[e + end.len()..]);
+        (clean, toc)
+    } else {
+        (content.to_string(), String::new())
+    }
 }
 
 pub async fn serve_wiki_page(Path(slug): Path<String>) -> Result<Html<String>, StatusCode> {
