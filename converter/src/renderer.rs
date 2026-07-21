@@ -9,10 +9,15 @@ pub struct Renderer<'a> {
 
 impl<'a> Renderer<'a> {
     pub fn new(source: &'a str) -> Self {
-        Renderer { source }
+        Renderer {
+            source,
+            headings: Vec::new(),
+            suppress_toc: false,
+            custom_toc: None,
+        }
     }
 
-    pub fn render(&self, nodes: &[Node]) -> String {
+    pub fn render(&mut self, nodes: &[Node]) -> String {
         self.render_children(nodes)
     }
 
@@ -20,9 +25,24 @@ impl<'a> Renderer<'a> {
         if self.suppress_toc || self.headings.is_empty() {
             return String::new();
         }
+
+        if let Some(ref custom) = self.custom_toc {
+            return custom.clone();
+        }
+
+        // auto-generate from self.headings
+        let mut html = String::from("<ul class=\"menu menu-sm\">");
+        for (level, text, anchor) in &self.headings {
+            let indent = "  ".repeat((*level - 1) as usize);
+            html.push_str(&format!(
+                "{indent}<li><a href=\"#{anchor}\">{text}</a></li>\n"
+            ));
+        }
+        html.push_str("</ul>");
+        html
     }
 
-    fn render_children(&self, children: &[Node]) -> String {
+    fn render_children(&mut self, children: &[Node]) -> String {
         children
             .iter()
             .map(|c| self.render_node(c))
@@ -30,7 +50,7 @@ impl<'a> Renderer<'a> {
             .concat()
     }
 
-    fn render_node(&self, node: &Node) -> String {
+    fn render_node(&mut self, node: &Node) -> String {
         match node.n_type {
             NodeType::Text => escape_html(&self.source[node.start..node.end]),
 
@@ -65,7 +85,10 @@ impl<'a> Renderer<'a> {
                 let text = self.render_flat_text(&node.children);
                 let anchor = slugify(&text);
                 self.headings.push((level, text.clone(), anchor.clone()));
-                format!("<h{level} id=\"{anchor}\" class=\"mast-heading-{level}\">{}</h{level}>", ...)
+                format!(
+                    "<h{level} id=\"{anchor}\" class=\"mast-heading-{level}\">{}</h{level}>",
+                    self.render_children(&node.children)
+                )
             }
 
             NodeType::Macro => {
@@ -138,7 +161,7 @@ impl<'a> Renderer<'a> {
     }
 
     fn render_pseudohtml(
-        &self,
+        &mut self,
         tag: &str,
         attrs: &str,
         self_closing: bool,

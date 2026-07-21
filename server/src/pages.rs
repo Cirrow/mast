@@ -71,7 +71,7 @@ pub async fn serve_static_page(Path(slug): Path<String>) -> Result<Html<String>,
             .unwrap_or_else(|_| "<h1>404</h1><p>Page not found</p>".to_string())
     });
 
-    Ok(Html(inject(&content)))
+    Ok(Html(inject(&content, "")))
 }
 
 pub async fn serve_wiki_page(Path(slug): Path<String>) -> Result<Html<String>, StatusCode> {
@@ -79,8 +79,8 @@ pub async fn serve_wiki_page(Path(slug): Path<String>) -> Result<Html<String>, S
     let file_path = safe_path(&base, &format!("{}.txt", slug))?;
 
     let content = std::fs::read_to_string(&file_path).unwrap_or_default();
-    let html = converter::render_page(&content).html;
-    Ok(Html(inject(&html)))
+    let page = converter::render_page(&content);
+    Ok(Html(inject(&page.html, &page.toc)))
 }
 
 pub async fn serve_raw_page(Path(slug): Path<String>) -> Result<Json<RawPageResponse>, StatusCode> {
