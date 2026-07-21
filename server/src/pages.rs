@@ -56,8 +56,10 @@ pub fn get_shell() -> Cow<'static, str> {
     }
 }
 
-pub fn inject(content: &str) -> String {
-    get_shell().replace("<!--MAST-CONTENT-->", content)
+pub fn inject(content: &str, toc: &str) -> String {
+    get_shell()
+        .replace("<!--MAST-CONTENT-->", content)
+        .replace("<!--MAST-TOC-->", toc)
 }
 
 pub async fn serve_static_page(Path(slug): Path<String>) -> Result<Html<String>, StatusCode> {

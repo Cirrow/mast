@@ -2,6 +2,9 @@ use crate::parser::{Node, NodeType};
 
 pub struct Renderer<'a> {
     source: &'a str,
+    headings: Vec<(u8, String, String)>, // (level, text, anchor_id)
+    suppress_toc: bool,
+    custom_toc: Option<String>,
 }
 
 impl<'a> Renderer<'a> {
@@ -11,6 +14,12 @@ impl<'a> Renderer<'a> {
 
     pub fn render(&self, nodes: &[Node]) -> String {
         self.render_children(nodes)
+    }
+
+    pub fn build_toc(&self) -> String {
+        if self.suppress_toc || self.headings.is_empty() {
+            return String::new();
+        }
     }
 
     fn render_children(&self, children: &[Node]) -> String {
@@ -47,11 +56,28 @@ impl<'a> Renderer<'a> {
             }
 
             NodeType::Heading => {
-                let level = node.n_detail.as_deref().unwrap_or("6");
-                format!(
-                    "<h{level} class=\"mast-heading-{level}\">{}</h{level}>",
-                    self.render_children(&node.children),
-                )
+                let level = node
+                    .n_detail
+                    .as_deref()
+                    .unwrap_or("6")
+                    .parse::<u8>()
+                    .unwrap_or(6);
+                let text = self.render_flat_text(&node.children);
+                let anchor = slugify(&text);
+                self.headings.push((level, text.clone(), anchor.clone()));
+                format!("<h{level} id=\"{anchor}\" class=\"mast-heading-{level}\">{}</h{level}>", ...)
+            }
+
+            NodeType::Macro => {
+                let detail = node.n_detail.as_deref().unwrap_or("");
+                match detail {
+                    "NOTOC" => self.suppress_toc = true,
+                    "CUSTOMTOC" => {
+                        self.custom_toc = Some(self.render_children(&node.children));
+                    }
+                    _ => {}
+                }
+                String::new()
             }
 
             NodeType::Quote => {
@@ -199,6 +225,22 @@ fn split_tag_attrs(detail: &str) -> (&str, &str) {
         Some(pos) => (&detail[..pos], detail[pos..].trim()),
         None => (detail, ""),
     }
+}
+
+fn slugify(text: &str) -> String {
+    text.to_lowercase()
+        .chars()
+        .map(|c| {
+            if c.is_alphanumeric() || c == '-' || c == ' ' {
+                c
+            } else {
+                ' '
+            }
+        })
+        .collect::<String>()
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join("-")
 }
 
 fn extract_attr<'a>(attrs: &'a str, name: &str) -> Option<String> {

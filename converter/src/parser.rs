@@ -19,6 +19,7 @@ pub enum NodeType {
     Linebreak,
     Newline,
     Whitespace,
+    Macro,
     Eof,
 }
 
@@ -114,6 +115,61 @@ impl Parser {
                         end: t.end,
                     });
                     i = self.line_end(tokens, i + 1) + 1;
+                }
+
+                TokenType::Macro => {
+                    let detail = t.t_detail.as_deref().unwrap_or("");
+                    if detail == "CUSTOMTOC:begin" {
+                        // Block macro — collect everything until ~~CUSTOMTOC:end~~
+                        let mut content_end = tokens.len();
+                        let mut found_end = false;
+                        for j in (i + 1)..tokens.len() {
+                            if tokens[j].t_type == TokenType::Macro {
+                                if let Some(ref d) = tokens[j].t_detail {
+                                    if d == "CUSTOMTOC:end" {
+                                        content_end = j;
+                                        found_end = true;
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+
+                        if found_end {
+                            let inner_tokens = &tokens[i + 1..content_end];
+                            let inner_html = self.nodeify(inner_tokens);
+                            blocks.push(Node {
+                                n_type: NodeType::Macro,
+                                n_detail: Some("CUSTOMTOC".to_string()),
+                                children: inner_html,
+                                start: t.start,
+                                end: tokens[content_end].end,
+                            });
+                            i = content_end + 1;
+                        } else {
+                            // No closing tag
+                            eprintln!(
+                                "warning: ~~CUSTOMTOC:begin~~ without matching ~~CUSTOMTOC:end~~"
+                            );
+                            blocks.push(Node {
+                                n_type: NodeType::Text,
+                                n_detail: Some("~~CUSTOMTOC:begin~~".to_string()),
+                                start: t.start,
+                                end: t.end,
+                                ..Default::default()
+                            });
+                            i += 1;
+                        }
+                    } else {
+                        blocks.push(Node {
+                            n_type: NodeType::Macro,
+                            n_detail: Some(detail.to_string()),
+                            start: t.start,
+                            end: t.end,
+                            ..Default::default()
+                        });
+                        i += 1;
+                    }
                 }
 
                 TokenType::Hr => {
@@ -543,7 +599,13 @@ mod tests {
 
     #[test]
     fn debug_parse() {
-        let input = "****bold**** and //italic//";
+        // cargo test debug_parse -- --nocapture
+        let input = r#"~~NOTOC~~
+        === Title ===
+        content
+        ~~CUSTOMTOC:begin~~
+        custom html here
+        ~~CUSTOMTOC:end~~"#;
         let tokens = Lexer::new().tokenise(input);
         let ast = Parser::new().nodeify(&tokens);
         println!("{:#?}", ast);

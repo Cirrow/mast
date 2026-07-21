@@ -31,6 +31,7 @@ pub struct FootnoteOpenHandler;
 pub struct FootnoteCloseHandler;
 pub struct QuoteHandler;
 pub struct HrHandler;
+pub struct MacroHandler;
 
 impl Handler for WhitespaceHandler {
     fn trigger(&self) -> Option<char> {
@@ -98,6 +99,51 @@ impl Handler for BoldHandler {
                 start: cursor.pos,
                 end: cursor.pos + 2,
                 ..Default::default()
+            }
+        }
+    }
+}
+
+impl Handler for MacroHandler {
+    fn trigger(&self) -> Option<char> {
+        Some('~')
+    }
+
+    fn priority(&self) -> u16 {
+        2
+    }
+
+    fn maybe(&self, c: char) -> usize {
+        if c == '~' { 2 } else { 0 }
+    }
+
+    fn confirm(&self, s: &str) -> bool {
+        s.starts_with("~~")
+    }
+
+    fn requires_line_start(&self) -> bool {
+        true
+    }
+
+    fn handle(&self, cursor: &Cursor) -> Token {
+        let remaining = &cursor.input[cursor.pos..];
+        // find closing ~~
+        if let Some(end) = remaining[2..].find("~~") {
+            let inner = &remaining[2..2 + end];
+            let detail = inner.to_string();
+            Token {
+                t_type: TokenType::Macro,
+                t_detail: Some(detail),
+                start: cursor.pos,
+                end: cursor.pos + 2 + end + 2,
+            }
+        } else {
+            // no closing ~~ — emit as text
+            Token {
+                t_type: TokenType::Text,
+                t_detail: Some("~~".to_string()),
+                start: cursor.pos,
+                end: cursor.pos + 2,
             }
         }
     }
@@ -636,6 +682,7 @@ pub fn builtin_handlers() -> Vec<Box<dyn Handler>> {
         Box::new(FootnoteCloseHandler),
         Box::new(QuoteHandler),
         Box::new(PseudoHTMLHandler),
+        Box::new(MacroHandler),
         Box::new(HrHandler),
     ]
 }

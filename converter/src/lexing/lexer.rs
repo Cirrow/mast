@@ -27,6 +27,7 @@ pub enum TokenType {
     Quote,
 
     PseudoHtml,
+    Macro,
 
     Linebreak,
     Newline,
