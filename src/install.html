@@ -1,5 +1,5 @@
 
-    <div class="bg-base-200 shadow-xl w-full">
+    <div class="w-full">
         <div class="card-body">
             <h2 class="card-title text-2xl mb-4">Mast Wiki Installer</h2>
 
@@ -18,41 +18,46 @@
                         class="input input-bordered w-full" required />
                 </div>
 
-                <!-- Admin Username -->
-                <div class="form-control mb-3">
-                    <label class="label">
-                        <span class="label-text">Admin Username</span>
-                    </label>
-                    <input type="text" name="sudo_username" placeholder="admin"
-                        class="input input-bordered w-full" required />
+                <div class="grid grid-cols-2 grid-rows-1 gaps-4">
+                    <!-- Admin Username -->
+                    <div class="form-control mb-3 row-start-1 cols-start-1">
+                        <label class="label">
+                            <span class="label-text">Admin Username</span>
+                        </label>
+                        <input type="text" name="sudo_username" placeholder="admin"
+                            class="input input-bordered w-full" required />
+                    </div>
+
+                    <!-- Admin Email -->
+                    <div class="form-control mb-3 col-start-2">
+                        <label class="label">
+                            <span class="label-text">Admin Email</span>
+                        </label>
+                        <input type="email" name="sudo_email" placeholder="admin@example.com"
+                            class="input input-bordered w-full" required />
+                    </div>
                 </div>
 
-                <!-- Admin Email -->
-                <div class="form-control mb-3">
-                    <label class="label">
-                        <span class="label-text">Admin Email</span>
-                    </label>
-                    <input type="email" name="sudo_email" placeholder="admin@example.com"
-                        class="input input-bordered w-full" required />
+                <div class="grid grid-cols-2 grid-rows-1 gaps-4">
+                    <!-- Password -->
+                    <div class="col-start-1 row-start-1 form-control mb-3">
+                        <label class="label">
+                            <span class="label-text">Password</span>
+                        </label>
+                        <input type="password" name="sudo_pwd"
+                            class="input input-bordered w-full" required />
+                    </div>
+
+                    <!-- Confirm Password -->
+                    <div class="col-start-2 form-control mb-3">
+                        <label class="label">
+                            <span class="label-text">Confirm Password</span>
+                        </label>
+                        <input type="password" name="sudo_pwd_confirm"
+                            class="input input-bordered w-full" required />
+                    </div>
                 </div>
 
-                <!-- Password -->
-                <div class="form-control mb-3">
-                    <label class="label">
-                        <span class="label-text">Password</span>
-                    </label>
-                    <input type="password" name="sudo_pwd"
-                        class="input input-bordered w-full" required />
-                </div>
-
-                <!-- Confirm Password -->
-                <div class="form-control mb-3">
-                    <label class="label">
-                        <span class="label-text">Confirm Password</span>
-                    </label>
-                    <input type="password" name="sudo_pwd_confirm"
-                        class="input input-bordered w-full" required />
-                </div>
 
                 <!-- ACL Policy -->
                 <fieldset class="fieldset mb-3">
@@ -80,7 +85,7 @@
                 <fieldset class="fieldset mb-3">
                     <legend class="fieldset-legend">Auth Methods</legend>
 
-                    <div class="grid grid-cols-5 grid-rows-5 gap-4">
+                    <div class="grid grid-cols-3 grid-rows-2 gap-4">
                         <div >
                             <label class="label cursor-pointer gap-2">
                                 <input type="checkbox" name="auth_methods" value="username"
