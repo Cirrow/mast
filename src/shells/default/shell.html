@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg" />
     <link href="/assets/styles.css" rel="stylesheet" />
-    <title>Mast</title>
+    <title><!--MAST_TITLE--></title>
 </head>
 <body>
     <div id="mainarea" class="">
@@ -17,7 +17,7 @@
                     <div class="w-full md:flex md:items-center md:gap-2">
                       <div class="flex items-center justify-between max-md:w-full">
                         <div class="navbar-start items-center justify-between max-md:w-full">
-                          <a class="link text-base-content link-neutral text-xl font-bold no-underline" href="#">FlyonUI</a>
+                          <a class="link text-base-content link-neutral text-xl font-bold no-underline" href="#"><!--MAST_TITLE--></a>
                         </div>
                         <div class="md:hidden">
                           <button type="button" class="collapse-toggle btn btn-outline btn-secondary btn-sm btn-square" data-collapse="#sticky-navbar-collapse" aria-controls="sticky-navbar-collapse" aria-label="Toggle navigation" >
@@ -66,23 +66,6 @@
             </main>
         </div>
     </div>
-    <script>
-        // Header: fetch /api/config, set wiki name, check auth
-        fetch('/api/config').then(r => r.json()).then(cfg => {
-            document.getElementById('wiki-name').textContent = cfg.basic.name
-        })
-        // Auth: fetch /api/auth/me, update auth link
-        fetch('/api/auth/me').then(r => {
-            if (r.ok) {
-                document.getElementById('auth-link').textContent = 'Account'
-                document.getElementById('auth-link').href = '/admin/account'
-            }
-        })
-        // Sidebar: fetch /api/routes, build tree
-        fetch('/api/routes').then(r => r.json()).then(routes => {
-            // build nested <li> tree from flat slug list
-        })
-    </script>
     <script src="/assets/flyonui.js"></script>
 </body>
 </html>

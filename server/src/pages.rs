@@ -57,15 +57,29 @@ pub fn get_shell() -> Cow<'static, str> {
 }
 
 pub fn inject(content: &str, toc: &str) -> String {
-    let (clean, inline_toc) = extract_inline_toc(content);
-    let final_toc = if inline_toc.is_empty() {
+    let (clean, custom_toc) = extract_custom_toc(content);
+    let final_toc = if custom_toc.is_empty() {
         toc
     } else {
-        &inline_toc
+        &custom_toc
     };
-    get_shell()
-        .replace("<!--MAST-CONTENT-->", &clean)
+    let mut html = get_shell().into_owned();
+    for (key, val) in template_vars() {
+        html = html.replace(&format!("<!--MAST_{key}-->"), &val);
+    }
+    html.replace("<!--MAST-CONTENT-->", &clean)
         .replace("<!--MAST-TOC-->", final_toc)
+}
+
+fn template_vars() -> Vec<(&'static str, String)> {
+    if !config::initcheck() {
+        return vec![("MAST_TITLE", "Mast".to_string())];
+    }
+    vec![
+        ("MAST_TITLE", CFG.basic.name.clone()),
+        ("MAST_SITE_NAME", CFG.basic.name.clone()),
+        ("MAST_FOOTER", format!("Powered by Mast")),
+    ]
 }
 
 pub async fn serve_static_page(Path(slug): Path<String>) -> Result<Html<String>, StatusCode> {
@@ -80,7 +94,7 @@ pub async fn serve_static_page(Path(slug): Path<String>) -> Result<Html<String>,
     Ok(Html(inject(&content, "")))
 }
 
-fn extract_inline_toc(content: &str) -> (String, String) {
+fn extract_custom_toc(content: &str) -> (String, String) {
     let start = "<!--MAST-TOC-CONTENT-->";
     let end = "<!--/MAST-TOC-CONTENT-->";
     if let (Some(s), Some(e)) = (content.find(start), content.find(end)) {
