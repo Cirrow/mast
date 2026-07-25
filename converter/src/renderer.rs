@@ -31,11 +31,13 @@ impl<'a> Renderer<'a> {
         }
 
         // auto-generate from self.headings
-        let mut html = String::from("<ul class=\"menu menu-sm\">");
+        let mut html = String::from(
+            "<ul class=\"menu menu-sm\" data-scrollspy=\"#mast-content\"  data-scrollspy-scrollable-parent=\"body\">",
+        );
         for (level, text, anchor) in &self.headings {
             let indent = "  ".repeat((*level - 1) as usize);
             html.push_str(&format!(
-                "{indent}<li><a href=\"#{anchor}\">{text}</a></li>\n"
+                "{indent}<li><a href=\"#{anchor}\"  class=\"hover:text-base-content scrollspy-active:text-primary\">{text}</a></li>\n"
             ));
         }
         html.push_str("</ul>");

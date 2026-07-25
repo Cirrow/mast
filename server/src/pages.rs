@@ -73,11 +73,10 @@ pub fn inject(content: &str, toc: &str) -> String {
 
 fn template_vars() -> Vec<(&'static str, String)> {
     if !config::initcheck() {
-        return vec![("MAST_TITLE", "Mast".to_string())];
+        return vec![("TITLE", "Mast".to_string())];
     }
     vec![
-        ("MAST_TITLE", CFG.basic.name.clone()),
-        ("MAST_SITE_NAME", CFG.basic.name.clone()),
+        ("TITLE", CFG.basic.name.clone()),
         ("MAST_FOOTER", format!("Powered by Mast")),
     ]
 }
@@ -107,12 +106,17 @@ fn extract_custom_toc(content: &str) -> (String, String) {
 }
 
 pub async fn serve_wiki_page(Path(slug): Path<String>) -> Result<Html<String>, StatusCode> {
+    eprintln!("Serve wiki page entry loaded");
     let base = CFG.base_dir.join(&CFG.storage.location);
     let file_path = safe_path(&base, &format!("{}.txt", slug))?;
 
     let content = std::fs::read_to_string(&file_path).unwrap_or_default();
+    eprintln!("content read to string");
     let page = converter::render_page(&content);
-    Ok(Html(inject(&page.html, &page.toc)))
+    eprintln!("Rendering successful");
+    let result = inject(&page.html, &page.toc);
+    eprintln!("Injection complete, sending response");
+    Ok(Html(result))
 }
 
 pub async fn serve_raw_page(Path(slug): Path<String>) -> Result<Json<RawPageResponse>, StatusCode> {
