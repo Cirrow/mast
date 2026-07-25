@@ -522,7 +522,7 @@ impl Handler for QMarkHandler {
         Token {
             t_type: TokenType::QMark,
             start: cursor.pos,
-            end: cursor.pos,
+            end: cursor.pos + 1,
             ..Default::default()
         }
     }
