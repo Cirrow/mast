@@ -55,7 +55,9 @@ impl Parser {
                 }
 
                 TokenType::Heading => {
-                    let open_count = 7 - t.t_detail.as_ref().unwrap().parse::<usize>().unwrap();
+                    let detail = t.t_detail.as_deref().unwrap_or("6");
+                    let parsed = detail.parse::<usize>().unwrap_or(6);
+                    let open_count = 7 - parsed;
 
                     // find closing
                     let mut close_count = 0;
@@ -368,7 +370,16 @@ impl Parser {
                             },
                         );
                     } else {
-                        panic!("Unmatched LinkClose ]] at pos {}", t.start);
+                        Self::emit(
+                            &mut stack,
+                            &mut result,
+                            Node {
+                                n_detail: Some("]]".to_string()),
+                                start: t.start,
+                                end: t.end,
+                                ..Default::default()
+                            },
+                        );
                     }
                     i += 1;
                 }
@@ -418,7 +429,16 @@ impl Parser {
                             },
                         );
                     } else {
-                        panic!("Unmatched ImageClose }} at pos {}", t.start);
+                        Self::emit(
+                            &mut stack,
+                            &mut result,
+                            Node {
+                                n_detail: Some("}}".to_string()),
+                                start: t.start,
+                                end: t.end,
+                                ..Default::default()
+                            },
+                        );
                     }
                     i += 1;
                 }
@@ -446,7 +466,16 @@ impl Parser {
                             },
                         );
                     } else {
-                        panic!("Unmatched FootnoteClose )) at pos {}", t.start);
+                        Self::emit(
+                            &mut stack,
+                            &mut result,
+                            Node {
+                                n_detail: Some("))".to_string()),
+                                start: t.start,
+                                end: t.end,
+                                ..Default::default()
+                            },
+                        );
                     }
                     i += 1;
                 }
@@ -477,7 +506,16 @@ impl Parser {
                                 },
                             );
                         } else {
-                            panic!("Unmatched closing </{}> at pos {}", close_tag, t.start);
+                            Self::emit(
+                                &mut stack,
+                                &mut result,
+                                Node {
+                                    n_detail: Some(format!("</{}>", close_tag)),
+                                    start: t.start,
+                                    end: t.end,
+                                    ..Default::default()
+                                },
+                            );
                         }
                     } else if detail.trim_end().ends_with('/') {
                         Self::emit(
@@ -501,8 +539,9 @@ impl Parser {
                         &mut stack,
                         &mut result,
                         Node {
-                            n_type: NodeType::Text,
                             n_detail: Some("?".to_string()),
+                            start: t.start,
+                            end: t.end,
                             ..Default::default()
                         },
                     );
@@ -521,7 +560,16 @@ impl Parser {
                 }
 
                 _ => {
-                    panic!("Unexpected token {:?} at pos {}", t.t_type, t.start);
+                    Self::emit(
+                        &mut stack,
+                        &mut result,
+                        Node {
+                            n_detail: Some(format!("{:?}", t.t_type)),
+                            start: t.start,
+                            end: t.end,
+                            ..Default::default()
+                        },
+                    );
                 }
             }
         }
