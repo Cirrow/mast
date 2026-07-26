@@ -392,7 +392,7 @@ impl Handler for LinkCloseHandler {
         11
     }
     fn maybe(&self, c: char) -> usize {
-        if c == '[' { 2 } else { 0 }
+        if c == ']' { 2 } else { 0 }
     }
     fn confirm(&self, s: &str) -> bool {
         s == "]]"
@@ -549,8 +549,7 @@ impl Handler for HeadingHandler {
     fn handle(&self, cursor: &Cursor) -> Token {
         let remaining = &cursor.input[cursor.pos..];
         let open_count = remaining.find(|c| c != '=').unwrap_or(remaining.len());
-        let level = (7 - open_count).to_string();
-
+        let level = 7usize.saturating_sub(open_count.clamp(2, 6)).to_string();
         Token {
             t_type: TokenType::Heading,
             t_detail: Some(level),
