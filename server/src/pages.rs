@@ -64,6 +64,7 @@ pub fn inject(content: &str, toc: &str) -> String {
         &custom_toc
     };
     let mut html = get_shell().into_owned();
+    html = resolve_includes(&html);
     for (key, val) in template_vars() {
         html = html.replace(&format!("<!--MAST_{key}-->"), &val);
     }
@@ -79,6 +80,41 @@ fn template_vars() -> Vec<(&'static str, String)> {
         ("TITLE", CFG.basic.name.clone()),
         ("MAST_FOOTER", format!("Powered by Mast")),
     ]
+}
+
+fn resolve_includes(html: &str) -> String {
+    let base = crate::config::base_dir();
+    let shell = if config::initcheck() {
+        CFG.shell.shell.clone()
+    } else {
+        "default".to_string()
+    };
+    let shell_dir = base.join("src/shells").join(&shell);
+
+    let mut result = html.to_string();
+    let marker_start = "<!--MAST_INCLUDE:";
+    let marker_end = "-->";
+
+    while let Some(start) = result.find(marker_start) {
+        let content_start = start + marker_start.len();
+        if let Some(end) = result[content_start..].find(marker_end) {
+            let name = &result[content_start..content_start + end];
+            // strip any path traversal chars, force .html
+            let safe_name = name
+                .replace('/', "")
+                .replace('\\', "")
+                .replace('.', "")
+                .replace("..", "");
+            let file_path = shell_dir.join(format!("components/{safe_name}.html"));
+            let included = std::fs::read_to_string(&file_path)
+                .unwrap_or_else(|e| format!("<!-- include error: {safe_name}: {e} -->"));
+            let full_end = content_start + end + marker_end.len();
+            result = format!("{}{}{}", &result[..start], included, &result[full_end..]);
+        } else {
+            break;
+        }
+    }
+    result
 }
 
 pub async fn serve_static_page(Path(slug): Path<String>) -> Result<Html<String>, StatusCode> {
