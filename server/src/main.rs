@@ -73,7 +73,6 @@ async fn main() {
             return next.run(req).await.into_response();
         }
         if !config::initcheck() {
-            // <-- just reads the flag
             return Redirect::to("/install").into_response();
         }
         next.run(req).await.into_response()

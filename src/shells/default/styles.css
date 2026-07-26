@@ -7,3 +7,7 @@
 
 @source "./";
 @source "../../install.html";
+
+.prose p {
+    color: #000;
+}
