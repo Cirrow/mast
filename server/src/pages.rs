@@ -38,6 +38,22 @@ fn mtime_info(path: &std::path::Path) -> (String, String) {
     }
 }
 
+fn extract_first_heading(html: &str) -> (String, String) {
+    for level in 1..=6u8 {
+        let open = format!("<h{level}");
+        if let Some(start) = html.find(&open) {
+            let close = format!("</h{level}>");
+            if let Some(close_pos) = html[start..].find(&close) {
+                let heading_end = start + close_pos + close.len(); // <-- fix
+                let heading = html[start..heading_end].to_string();
+                let body = format!("{}{}", &html[..start], &html[heading_end..]);
+                return (heading, body);
+            }
+        }
+    }
+    (String::new(), html.to_string())
+}
+
 pub fn get_shell() -> Cow<'static, str> {
     let base = crate::config::base_dir();
     let shell = if config::initcheck() {
@@ -63,21 +79,31 @@ pub fn inject(content: &str, toc: &str) -> String {
     } else {
         &custom_toc
     };
+    let (heading, body) = extract_first_heading(&clean);
     let mut html = get_shell().into_owned();
     html = resolve_includes(&html);
     for (key, val) in template_vars() {
         html = html.replace(&format!("<!--MAST_{key}-->"), &val);
     }
-    html.replace("<!--MAST-CONTENT-->", &clean)
+    html.replace("<!--MAST-HEADING-->", &heading)
+        .replace("<!--MAST-CONTENT-->", &body)
         .replace("<!--MAST-TOC-->", final_toc)
 }
 
 fn template_vars() -> Vec<(&'static str, String)> {
     if !config::initcheck() {
-        return vec![("TITLE", "Mast".to_string())];
+        return vec![("WIKINAME", "Mast".to_string())];
     }
     vec![
-        ("TITLE", CFG.basic.name.clone()),
+        ("WIKINAME", CFG.basic.name.clone()),
+        (
+            "HOME",
+            format!(
+                "{}{}",
+                CFG.basic.wikipage_directory_prefix.as_deref().unwrap(),
+                CFG.basic.default_wikipage
+            ),
+        ),
         ("MAST_FOOTER", format!("Powered by Mast")),
     ]
 }
