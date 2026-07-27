@@ -44,6 +44,7 @@ pub struct Basic {
     pub image_path: Option<String>,
     pub pinned_pages: Vec<String>,
     pub wikipage_directory_prefix: Option<String>,
+    pub default_wikipage: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
