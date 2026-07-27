@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg" />
     <link href="/assets/styles.css" rel="stylesheet" />
-    <title><!--MAST_TITLE--></title>
+    <title><!--MAST_WIKINAME--></title>
 </head>
 <body>
     <div id="mainarea" class="">
@@ -17,12 +17,17 @@
 
         <div id="contentdiv" class="w-full justify-center caret-amber-500">
             <main class="w-full h-full mx-auto flex p-4">
-                <div id="mast-content" class="flex-1 flex justify-center">
-                    <article id="mast-content" class="prose max-w-none w-3xl">
-                        <!--MAST-CONTENT-->
-                    </article>
+                <div id="mast-content" class="items-center justify-center flex w-full pt-10">
+                    <div class="flex items-center flex-col">
+                        <header class="w-full border-b-1 border-b-black">
+                            <span><!--MAST-HEADING--></span>
+                        </header>
+                        <article id="mast-content" class="prose max-w-none w-4xl mt-10">
+                            <!--MAST-CONTENT-->
+                        </article>
+                    </div>
                 </div>
-                <div id="toc" class="w-72 flex-shrink-0 fixed right-0 top-20">
+                <div id="toc" class="w-72 h-full flex-shrink-0 fixed right-0 top-20">
                     <div class="pr-3">
                         <!--MAST-TOC-->
                     </div>

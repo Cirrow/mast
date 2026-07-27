@@ -11,3 +11,8 @@
 .prose p {
     color: #000;
 }
+
+h1 {
+    font-weight: bold;
+    font-size: 2.5em;
+}
