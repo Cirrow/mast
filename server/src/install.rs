@@ -122,6 +122,7 @@ pub async fn handle_install(req: axum::Form<InstallRequest>) -> impl IntoRespons
 [basic]
 name = "{site_name}"
 wikipage_directory_prefix = "/wiki/"
+default_wikipage = "home"
 image_as_home = false
 pinned_pages = [""]
 
