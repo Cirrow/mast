@@ -38,13 +38,28 @@ pub struct Config {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
 pub struct Basic {
     pub name: String,
     pub image_as_home: bool,
     pub image_path: Option<String>,
-    pub pinned_pages: Vec<String>,
-    pub wikipage_directory_prefix: Option<String>,
+    pub pinned_pages: Option<Vec<String>>,
+    pub wikipage_directory_prefix: String,
     pub default_wikipage: String,
+}
+// Default values for specific fields should they be missing. That said, there are certain fields that should not be empty.
+// if there are missing values, and the field requires them, the validate() function should catch them.
+impl Default for Basic {
+    fn default() -> Self {
+        Self {
+            name: String::new(),
+            image_as_home: false.into(),
+            image_path: None,
+            pinned_pages: None,
+            wikipage_directory_prefix: "/wiki/".into(),
+            default_wikipage: "home".into(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -84,5 +99,37 @@ impl Config {
 
         config.base_dir = base_dir();
         config
+    }
+
+    pub fn validate(&self) -> Vec<String> {
+        let mut errors = vec![];
+    }
+
+    fn validate_basic(&self) -> Vec<String> {
+        let mut e = Vec::new();
+
+        for val in [&self.basic.name] {
+            if val.is_empty() {
+                e.push(format!("{val} must not be empty"));
+            }
+        }
+
+        for (val, v)
+        e
+    }
+
+    fn validate_auth(&self) {
+        let mut e = Vec::new();
+
+        let valid_pv = ['n', 'r', 'u', 'c', 'd'];
+
+        for (val, valid) in [
+            (&self.auth.base_user_permission, &valid_pv[..]),
+            (&self.auth.auth_user_permission, &valid_pv[..]),
+        ] {
+            if !valid.contains(val) {
+                e.push(format!("{val} is not a valid selection."));
+            }
+        }
     }
 }
