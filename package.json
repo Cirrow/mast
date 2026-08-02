@@ -16,6 +16,8 @@
   },
   "devDependencies": {
     "@fontsource-variable/inter": "^5.2.8",
+    "@iconify/json": "^2.2.508",
+    "@iconify/tailwind4": "^1.2.3",
     "@internationalized/date": "latest",
     "@types/node": "latest",
     "@types/pg": "^8.20.0",
