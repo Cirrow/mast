@@ -197,12 +197,11 @@ impl Config {
         let mut e = Vec::new();
         let storage_types = ["local_git", "remote_git"];
 
-        match self.storage.storage_type.as_deref() {
-            Some(t) if storage_types.contains(&t) => {}
-            Some(t) => e.push(format!(
-                "storage.type must be one of {storage_types:?} (got '{t}')"
-            )),
-            None => e.push("storage.type must be set".into()),
+        if !storage_types.contains(&self.storage.storage_type.as_str()) {
+            e.push(format!(
+                "storage.type must be one of {storage_types:?} (got '{}')",
+                self.storage.storage_type
+            ));
         }
         e
     }
