@@ -100,8 +100,7 @@ fn template_vars() -> Vec<(&'static str, String)> {
             "HOME",
             format!(
                 "{}{}",
-                CFG.basic.wikipage_directory_prefix.as_deref().unwrap(),
-                CFG.basic.default_wikipage
+                CFG.basic.wikipage_directory_prefix, CFG.basic.default_wikipage
             ),
         ),
         ("MAST_FOOTER", format!("Powered by Mast")),
