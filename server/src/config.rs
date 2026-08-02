@@ -88,14 +88,14 @@ impl Default for Auth {
 #[serde(default)]
 pub struct Storage {
     #[serde(rename = "type")]
-    pub storage_type: Option<String>,
-    pub location: Option<String>,
+    pub storage_type: String,
+    pub location: String,
 }
 impl Default for Storage {
     fn default() -> Self {
         Self {
-            storage_type: None,
-            location: None,
+            storage_type: "local_git".into(),
+            location: ".wiki/wiki".into(),
         }
     }
 }
