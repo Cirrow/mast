@@ -48,7 +48,7 @@ pub struct Basic {
     pub default_wikipage: String,
 }
 // Default values for specific fields should they be missing. That said, there are certain fields that should not be empty.
-// if there are missing values, and the field requires them, the validate() function should catch them.
+// if there are missing values, and the field requires them, the validate() function should catch them. If not, may cause issues
 impl Default for Basic {
     fn default() -> Self {
         Self {
@@ -63,25 +63,53 @@ impl Default for Basic {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
 pub struct Auth {
-    pub auth_methods: Vec<String>,
+    pub auth_methods: Option<Vec<String>>,
     pub users_file: String,
-    #[serde(default)]
     pub username_signup_requires_email: bool,
-    pub base_user_permission: char,
-    pub auth_user_permission: char,
+    pub base_user_permission: Option<char>,
+    pub auth_user_permission: Option<char>,
+}
+impl Default for Auth {
+    fn default() -> Self {
+        Self {
+            auth_methods: None,
+            users_file: "conf/users.toml".into(),
+            username_signup_requires_email: true.into(),
+            base_user_permission: None,
+            auth_user_permission: None,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
 pub struct Storage {
     #[serde(rename = "type")]
-    pub storage_type: String,
-    pub location: String,
+    pub storage_type: Option<String>,
+    pub location: Option<char>,
+}
+impl Default for Storage {
+    fn default() -> Self {
+        Self {
+            storage_type: None,
+            location: None,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
 pub struct Shell {
     pub shell: String,
+}
+impl Default for Shell {
+    fn default() -> Self {
+        Self {
+            shell: "default".into(),
+        }
+    }
 }
 
 pub fn base_dir() -> PathBuf {
@@ -102,7 +130,11 @@ impl Config {
     }
 
     pub fn validate(&self) -> Vec<String> {
-        let mut errors = vec![];
+        let mut errors = Vec::new();
+
+        errors.extend(self.validate_basic());
+
+        errors
     }
 
     fn validate_basic(&self) -> Vec<String> {
@@ -110,11 +142,18 @@ impl Config {
 
         for val in [&self.basic.name] {
             if val.is_empty() {
-                e.push(format!("{val} must not be empty"));
+                e.push(format!("Please set {val}"));
             }
         }
 
-        for (val, v)
+        for (flag, val) in [(&self.basic.image_as_home, &self.basic.image_path)] {
+            if *flag && val.is_none() {
+                e.push(format!(
+                    "When {flag} is set to true (or defaulted to true), {val} must be set."
+                ))
+            }
+        }
+
         e
     }
 
@@ -123,12 +162,23 @@ impl Config {
 
         let valid_pv = ['n', 'r', 'u', 'c', 'd'];
 
+        for val in [
+            &self.auth.base_user_permission,
+            &self.auth.auth_user_permission,
+        ] {
+            if val.is_empty() {
+                e.push(format!(
+                    "IAC initialisation seemed to have gone wrong, no {val} is set."
+                ));
+            }
+        }
+
         for (val, valid) in [
             (&self.auth.base_user_permission, &valid_pv[..]),
             (&self.auth.auth_user_permission, &valid_pv[..]),
         ] {
-            if !valid.contains(val) {
-                e.push(format!("{val} is not a valid selection."));
+            if !valid.contains(&val.unwrap()) {
+                e.push(format!("{val:?} is not a valid selection."));
             }
         }
     }
