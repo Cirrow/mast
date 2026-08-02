@@ -27,6 +27,7 @@ pub fn config_path() -> PathBuf {
 
 pub static CFG: LazyLock<Config> = LazyLock::new(|| Config::load());
 
+// ---- Mast configuration types
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Config {
     pub basic: Basic,
@@ -52,7 +53,7 @@ pub struct Basic {
 impl Default for Basic {
     fn default() -> Self {
         Self {
-            name: String::new(),
+            name: "Mast".into(),
             image_as_home: false.into(),
             image_path: None,
             pinned_pages: None,
@@ -88,7 +89,7 @@ impl Default for Auth {
 pub struct Storage {
     #[serde(rename = "type")]
     pub storage_type: Option<String>,
-    pub location: Option<char>,
+    pub location: Option<String>,
 }
 impl Default for Storage {
     fn default() -> Self {
@@ -121,11 +122,20 @@ pub fn base_dir() -> PathBuf {
 
 impl Config {
     pub fn load() -> Self {
-        let config_path = config_path();
-        let content = std::fs::read_to_string(&config_path).expect("mast-config.toml not found");
+        let content = std::fs::read_to_string(&config_path()).expect("mast-config.toml not found");
         let mut config: Config = toml::from_str(&content).expect("Failed to parse mast config");
 
         config.base_dir = base_dir();
+
+        let errors = config.validate();
+        if !errors.is_empty() {
+            eprintln!("mast-config.toml validation errors:");
+            for e in &errors {
+                eprintln!("  - {e}");
+            }
+            panic!("invalid configuration");
+        }
+
         config
     }
 
@@ -133,7 +143,9 @@ impl Config {
         let mut errors = Vec::new();
 
         errors.extend(self.validate_basic());
-
+        errors.extend(self.validate_auth());
+        errors.extend(self.validate_storage());
+        errors.extend(self.validate_shell());
         errors
     }
 
@@ -146,40 +158,68 @@ impl Config {
             }
         }
 
-        for (flag, val) in [(&self.basic.image_as_home, &self.basic.image_path)] {
-            if *flag && val.is_none() {
-                e.push(format!(
-                    "When {flag} is set to true (or defaulted to true), {val} must be set."
-                ))
+        if self.basic.image_as_home && self.basic.image_path.is_none() {
+            e.push("basic.image_path must be set when image_as_home is true".into());
+        }
+
+        if !self.basic.wikipage_directory_prefix.starts_with('/')
+            || !self.basic.wikipage_directory_prefix.ends_with('/')
+        {
+            e.push(
+                "basic.wikipage_directory_prefix must start and end with a forward slash".into(),
+            );
+        }
+
+        e
+    }
+
+    fn validate_auth(&self) -> Vec<String> {
+        let mut e = Vec::new();
+        let valid_pv = ['n', 'r', 'u', 'c', 'd'];
+
+        for (field, val) in [
+            ("auth.base_user_permission", &self.auth.base_user_permission),
+            ("auth.auth_user_permission", &self.auth.auth_user_permission),
+        ] {
+            match val {
+                Some(pv) if !valid_pv.contains(&pv.to_ascii_lowercase()) => {
+                    e.push(format!("{field} must be one of N, R, U, C, D (got '{pv}')"));
+                }
+                None => e.push(format!("{field} must be set")),
+                _ => {}
             }
         }
 
         e
     }
 
-    fn validate_auth(&self) {
+    fn validate_storage(&self) -> Vec<String> {
         let mut e = Vec::new();
+        let storage_types = ["local_git", "remote_git"];
 
-        let valid_pv = ['n', 'r', 'u', 'c', 'd'];
-
-        for val in [
-            &self.auth.base_user_permission,
-            &self.auth.auth_user_permission,
-        ] {
-            if val.is_empty() {
-                e.push(format!(
-                    "IAC initialisation seemed to have gone wrong, no {val} is set."
-                ));
-            }
+        match self.storage.storage_type.as_deref() {
+            Some(t) if storage_types.contains(&t) => {}
+            Some(t) => e.push(format!(
+                "storage.type must be one of {storage_types:?} (got '{t}')"
+            )),
+            None => e.push("storage.type must be set".into()),
         }
+        e
+    }
 
-        for (val, valid) in [
-            (&self.auth.base_user_permission, &valid_pv[..]),
-            (&self.auth.auth_user_permission, &valid_pv[..]),
-        ] {
-            if !valid.contains(&val.unwrap()) {
-                e.push(format!("{val:?} is not a valid selection."));
-            }
+    fn validate_shell(&self) -> Vec<String> {
+        let mut e = Vec::new();
+        let shell_path = base_dir()
+            .join("src/shells")
+            .join(&self.shell.shell)
+            .join("shell.html");
+        if !shell_path.exists() {
+            e.push(format!(
+                "'{}' shell not found (expected {})",
+                self.shell.shell,
+                shell_path.display()
+            ));
         }
+        e
     }
 }
