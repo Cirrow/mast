@@ -19,8 +19,15 @@
             <main class="w-full h-full mx-auto flex p-4">
                 <div id="mast-content" class="items-center justify-center flex w-full pt-10">
                     <div class="flex items-center flex-col">
-                        <header class="w-full border-b border-b-black">
+                        <header class="w-full border-b border-b-black flex justify-between">
                             <span><!--MAST-HEADING--></span>
+                            <div class="tooltip">
+                                <button type="button" aria-label="Tooltip" class="tooltip-toggle btn btn-soft"><a href="/edit?page="><span class="icon-[mdi--pencil]"></span></a></button>
+                                <span class="tooltip-content tooltip-shown:opacity-100 tooltip-shown:visible" role="tooltip">
+                                    <span class="tooltip-body">Edit this page</span>
+                                </span>
+                            </div>
+
                         </header>
                         <article id="mast-content" class="prose max-w-none w-4xl mt-10">
                             <!--MAST-CONTENT-->
@@ -35,6 +42,6 @@
             </main>
         </div>
     </div>
-    <script src="/assets/flyonui.js"></script>
+    <script src="../node_modules/flyonui/flyonui.js"></script>
 </body>
 </html>
