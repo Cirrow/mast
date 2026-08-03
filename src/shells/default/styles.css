@@ -1,17 +1,13 @@
 @import "tailwindcss";
 
-@import "../../../node_modules/flyonui/variants.css";
-
-
 @plugin "@tailwindcss/typography";
 @plugin "@iconify/tailwind4";
-@plugin "flyonui" {
+@plugin "daisyui" {
     themes: light --default, synthwave;
 }
 
 @source "./";
 @source "../../install.html";
-@source "../../../node_modules/flyonui/dist/index.js";
 
 .prose p {
     color: #000;

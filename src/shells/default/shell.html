@@ -21,11 +21,8 @@
                     <div class="flex items-center flex-col">
                         <header class="w-full border-b border-b-black flex justify-between">
                             <span><!--MAST-HEADING--></span>
-                            <div class="tooltip">
-                                <button type="button" aria-label="Tooltip" class="tooltip-toggle btn btn-soft"><a href="/edit?page="><span class="icon-[mdi--pencil]"></span></a></button>
-                                <span class="tooltip-content tooltip-shown:opacity-100 tooltip-shown:visible" role="tooltip">
-                                    <span class="tooltip-body">Edit this page</span>
-                                </span>
+                            <div class="tooltip" data-tip="Edit this page">
+                                <a href="/edit?page" type="button" class="btn btn-soft"><span class="icon-[mdi--pencil]"></span></a>
                             </div>
 
                         </header>
@@ -42,6 +39,5 @@
             </main>
         </div>
     </div>
-    <script src="../node_modules/flyonui/flyonui.js"></script>
 </body>
 </html>
