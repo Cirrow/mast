@@ -91,6 +91,7 @@ pub fn inject(content: &str, toc: &str) -> String {
 }
 
 fn template_vars() -> Vec<(&'static str, String)> {
+    // <!-- MAST_VARIABLE -->
     if !config::initcheck() {
         return vec![("WIKINAME", "Mast".to_string())];
     }
