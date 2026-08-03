@@ -3,14 +3,12 @@
   "type": "module",
   "version": "0.0.1",
   "scripts": {
-    "build": "tailwindcss -i src/shells/default/styles.css -o dist/client/styles.css && cp src/shell.html dist/client/shell/index.html && cp src/edit.html dist/client/edit/index.html",
-    "build:css": "npx @tailwindcss/cli -i src/styles.css -o public/output.css",
+    "build": "tailwindcss -i src/shells/default/styles.css -o dist/client/styles.css && cargo build --release",
     "dev": "npx concurrently -n tw,cargo -c blue,red \"npx tailwindcss -i src/shells/default/styles.css -o dist/client/styles.css --watch\" \"MAST_DEV=1 cargo run\""
   },
   "dependencies": {
     "@tailwindcss/cli": "^4.3.2",
     "@tailwindcss/typography": "^0.5.20",
-    "flyonui": "^2.4.1",
     "tailwindcss": "^4.3.2",
     "typescript": "^6.0.3"
   },
