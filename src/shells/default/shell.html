@@ -21,9 +21,18 @@
                     <div class="flex items-center flex-col">
                         <header class="w-full border-b border-b-black flex justify-between">
                             <span><!--MAST-HEADING--></span>
-                            <div class="tooltip" data-tip="Edit this page">
-                                <a href="/edit?page" type="button" class="btn btn-soft"><span class="icon-[mdi--pencil]"></span></a>
+                            <div>
+                                <div class="tooltip" data-tip="Read">
+                                    <a href="/" type="button"><span class="icon-[tabler--book]"></span></a>
+                                </div>
+                                <div class="tooltip" data-tip="Edit this page">
+                                    <a href="/edit?page" type="button"><span class="icon-[mdi--pencil]"></span></a>
+                                </div>
+                                <div class="tooltip" data-tip="View history">
+                                    <a href="/history?page" type="button"><span class="icon-[material-symbols--history-rounded]"></span></a>
+                                </div>
                             </div>
+
 
                         </header>
                         <article id="mast-content" class="prose max-w-none w-4xl mt-10">
@@ -31,7 +40,7 @@
                         </article>
                     </div>
                 </div>
-                <div id="toc" class="w-72 h-full flex-shrink-0 fixed right-0 top-20">
+                <div id="toc" class="w-72 h-full shrink-0 fixed right-0 top-20">
                     <div class="pr-3">
                         <!--MAST-TOC-->
                     </div>
