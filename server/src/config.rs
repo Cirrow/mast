@@ -68,15 +68,17 @@ impl Default for Basic {
 pub struct Auth {
     pub auth_methods: Option<Vec<String>>,
     pub users_file: String,
+    pub acl_file: String,
     pub username_signup_requires_email: bool,
-    pub base_user_permission: Option<char>,
-    pub auth_user_permission: Option<char>,
+    pub base_user_permission: Option<u8>,
+    pub auth_user_permission: Option<u8>,
 }
 impl Default for Auth {
     fn default() -> Self {
         Self {
             auth_methods: None,
             users_file: "conf/users.toml".into(),
+            acl_file: "conf/acl.toml".into(),
             username_signup_requires_email: true.into(),
             base_user_permission: None,
             auth_user_permission: None,
@@ -175,15 +177,16 @@ impl Config {
 
     fn validate_auth(&self) -> Vec<String> {
         let mut e = Vec::new();
-        let valid_pv = ['n', 'r', 'u', 'c', 'd'];
+        // Nrecud numeric PVs: N=0 R=1 E=2 C=4 U=16 D=255
+        let valid_pv: [u8; 6] = [0, 1, 2, 4, 16, 255];
 
         for (field, val) in [
             ("auth.base_user_permission", &self.auth.base_user_permission),
             ("auth.auth_user_permission", &self.auth.auth_user_permission),
         ] {
             match val {
-                Some(pv) if !valid_pv.contains(&pv.to_ascii_lowercase()) => {
-                    e.push(format!("{field} must be one of N, R, U, C, D (got '{pv}')"));
+                Some(pv) if !valid_pv.contains(pv) => {
+                    e.push(format!("{field} must be one of {valid_pv:?} (got '{pv}')"));
                 }
                 None => e.push(format!("{field} must be set")),
                 _ => {}
