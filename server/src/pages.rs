@@ -44,7 +44,7 @@ fn extract_first_heading(html: &str) -> (String, String) {
         if let Some(start) = html.find(&open) {
             let close = format!("</h{level}>");
             if let Some(close_pos) = html[start..].find(&close) {
-                let heading_end = start + close_pos + close.len(); // <-- fix
+                let heading_end = start + close_pos + close.len();
                 let heading = html[start..heading_end].to_string();
                 let body = format!("{}{}", &html[..start], &html[heading_end..]);
                 return (heading, body);
