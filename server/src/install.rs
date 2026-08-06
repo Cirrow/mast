@@ -1,5 +1,6 @@
 use crate::config::{self, config_path};
-use crate::pages::inject;
+use crate::pages::{PageContext, inject};
+
 use argon2::{
     Argon2,
     password_hash::{PasswordHasher, SaltString, rand_core::OsRng},
@@ -55,7 +56,7 @@ pub async fn serve_install_page() -> impl IntoResponse {
         .to_path_buf();
     let path = base_dir.join("src/install.html");
     let content = fs::read_to_string(&path).expect("install.html not found");
-    Html(inject(&content, "")).into_response()
+    Html(inject(&content, "", &PageContext::default())).into_response()
 }
 
 pub async fn handle_install(req: axum::Form<InstallRequest>) -> impl IntoResponse {

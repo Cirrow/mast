@@ -38,6 +38,8 @@ async fn main() {
         //api calls
         .route("/api/raw/{*slug}", get(serve_raw_page))
         .route("/api/routes", get(routes::get_routes))
+        // auth api calls
+        .route("/api/auth/config", get(auth::config))
         .route("/api/auth/login", post(auth::login))
         .route("/api/auth/me", get(auth::me))
         .route("/api/auth/logout", post(auth::logout))

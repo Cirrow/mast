@@ -10,7 +10,8 @@ pub struct User {
     pub pwd_hash: Option<String>,
     pub email: Option<String>,
     pub groups: Option<Vec<String>>,
-    pub userrule: Option<String>,
+    #[serde(default)]
+    pub userpv: HashMap<u8, Vec<String>>,
 }
 
 #[derive(Deserialize)]
@@ -24,10 +25,17 @@ pub struct UserInfo {
     pub username: String,
     pub email: Option<String>,
     pub groups: Vec<String>,
-    pub userrule: String,
+    pub userpv: HashMap<u8, Vec<String>>,
 }
 
-fn load_users() -> HashMap<String, User> {
+pub async fn config() -> Json<serde_json::Value> {
+    Json(serde_json::json!({
+        "auth_methods": CFG.auth.auth_methods.clone().unwrap_or_default(),
+        "username_signup_requires_email": CFG.auth.username_signup_requires_email,
+    }))
+}
+
+pub(crate) fn load_users() -> HashMap<String, User> {
     let path = CFG.base_dir.join(&CFG.auth.users_file);
     std::fs::read_to_string(&path)
         .ok()
@@ -99,6 +107,6 @@ fn user_to_info(username: String, user: &User) -> UserInfo {
         username,
         email: user.email.clone(),
         groups: user.groups.clone().unwrap_or_default(),
-        userrule: user.userrule.clone().unwrap_or_else(|| "r".to_string()),
+        userpv: user.userpv.clone(),
     }
 }

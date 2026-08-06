@@ -13,29 +13,15 @@
             <span class="icon-[tabler--x] hidden group-open:block size-4"></span>
           </summary>
           <ul id="sticky-navbar-collapse" class="menu absolute inset-x-0 top-full z-20 gap-2 bg-base-100 p-2 text-base shadow-sm">
-            <li><a href="#">Link 1</a></li>
+            <li><a href="/signin" class="auth-slot">Log in</a></li>
             <li><a href="#">Link 2</a></li>
-            <li>
-              <details class="group">
-                <summary class="list-none justify-between">Parent
-                  <span class="icon-[tabler--chevron-down] group-open:rotate-180 size-4"></span>
-                </summary>
-                <ul class="gap-1 p-2">
-                  <li><a href="#">Link 3</a></li>
-                  <li><a href="#">Link 4</a></li>
-                  <li><a href="#">Link 5</a></li>
-                  <li class="menu-title">More</li>
-                  <li><a href="#">Link 6</a></li>
-                </ul>
-              </details>
-            </li>
           </ul>
         </details>
       </div>
       <!-- Desktop nav (duplicated menu, shown md+) -->
       <div class="hidden md:flex md:navbar-end md:grow md:basis-full">
         <ul class="menu md:menu-horizontal gap-2 p-0 text-base">
-          <li><a href="#">Link 1</a></li>
+            <li><!--MAST_AUTH--></li>
           <li><a href="#">Link 2</a></li>
           <li>
             <details class="group">
@@ -56,3 +42,18 @@
     </div>
   </nav>
 </div>
+
+
+<script>
+  (async () => {
+    try {
+      const res = await fetch('/api/auth/me', { credentials: 'same-origin' });
+      if (res.status === 200) {
+        document.querySelectorAll('.auth-slot').forEach(a => {
+          a.textContent = 'Account';
+          a.href = '/account';
+        });
+      }
+    } catch { }
+  })();
+</script>

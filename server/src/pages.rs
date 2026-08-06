@@ -11,6 +11,11 @@ use tower_sessions::Session;
 
 static SHELL: OnceLock<String> = OnceLock::new();
 
+#[derive(Debug, Clone, Default)]
+pub struct PageContext {
+    pub username: Option<String>,
+}
+
 #[derive(Serialize)]
 pub struct RawPageResponse {
     pub content: String,
@@ -90,7 +95,7 @@ pub fn get_shell() -> Cow<'static, str> {
     }
 }
 
-pub fn inject(content: &str, toc: &str) -> String {
+pub fn inject(content: &str, toc: &str, ctx: &PageContext) -> String {
     let (clean, custom_toc) = extract_custom_toc(content);
     let final_toc = if custom_toc.is_empty() {
         toc
@@ -100,7 +105,7 @@ pub fn inject(content: &str, toc: &str) -> String {
     let (heading, body) = extract_first_heading(&clean);
     let mut html = get_shell().into_owned();
     html = resolve_includes(&html);
-    for (key, val) in template_vars() {
+    for (key, val) in template_vars(ctx) {
         html = html.replace(&format!("<!--MAST_{key}-->"), &val);
     }
     html.replace("<!--MAST-HEADING-->", &heading)
@@ -108,10 +113,12 @@ pub fn inject(content: &str, toc: &str) -> String {
         .replace("<!--MAST-TOC-->", final_toc)
 }
 
-fn template_vars() -> Vec<(&'static str, String)> {
-    // <!-- MAST_VARIABLE -->
+fn template_vars(ctx: &PageContext) -> Vec<(&'static str, String)> {
     if !config::initcheck() {
-        return vec![("WIKINAME", "Mast".to_string())];
+        return vec![
+            ("WIKINAME", "Mast".to_string()),
+            ("AUTH", auth_markup(None)),
+        ];
     }
     vec![
         ("WIKINAME", CFG.basic.name.clone()),
@@ -122,8 +129,16 @@ fn template_vars() -> Vec<(&'static str, String)> {
                 CFG.basic.wikipage_directory_prefix, CFG.basic.default_wikipage
             ),
         ),
-        ("MAST_FOOTER", format!("Powered by Mast")),
+        ("MAST_FOOTER", "Powered by Mast".to_string()),
+        ("AUTH", auth_markup(ctx.username.as_deref())),
     ]
+}
+
+fn auth_markup(username: Option<&str>) -> String {
+    match username {
+        Some(_) => r#"<li><a href="/account">Account</a></li>"#.to_string(),
+        None => r#"<li><a href="/signin">Log in</a></li>"#.to_string(),
+    }
 }
 
 fn resolve_includes(html: &str) -> String {
@@ -161,7 +176,11 @@ fn resolve_includes(html: &str) -> String {
     result
 }
 
-pub async fn serve_static_page(Path(slug): Path<String>) -> Result<Html<String>, StatusCode> {
+pub async fn serve_static_page(
+    session: Session,
+    Path(slug): Path<String>,
+) -> Result<Html<String>, StatusCode> {
+    let username: Option<String> = session.get("username").await.unwrap();
     let base = CFG.base_dir.join("src/shells").join(&CFG.shell.shell);
     let file_path = safe_path(&base, &format!("{slug}.html"))?;
 
@@ -170,7 +189,7 @@ pub async fn serve_static_page(Path(slug): Path<String>) -> Result<Html<String>,
             .unwrap_or_else(|_| "<h1>404</h1><p>Page not found</p>".to_string())
     });
 
-    Ok(Html(inject(&content, "")))
+    Ok(Html(inject(&content, "", &PageContext { username })))
 }
 
 fn extract_custom_toc(content: &str) -> (String, String) {
@@ -199,12 +218,11 @@ pub async fn serve_wiki_page(
     let file_path = safe_path(&base, &format!("{}.txt", slug))?;
 
     let content = std::fs::read_to_string(&file_path).unwrap_or_default();
-    eprintln!("content read to string");
     let page = converter::render_page(&content);
-    eprintln!("Rendering successful");
-    let result = inject(&page.html, &page.toc);
-    eprintln!("Injection complete, sending response");
-    Ok(Html(result))
+    let ctx = PageContext {
+        username: requester.username.clone(),
+    };
+    Ok(Html(inject(&page.html, &page.toc, &ctx)))
 }
 
 pub async fn serve_raw_page(
