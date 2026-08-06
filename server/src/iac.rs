@@ -5,12 +5,13 @@
 // their RAW NUMERIC values (N=0, R=1, E=2, C=4, U=16, D=255); the alpha characters
 // are only used for display.
 
+use crate::config::CFG;
 use std::collections::HashMap;
 use std::fs;
 use tower_sessions::Session;
 
 #[repr(u8)]
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum PV {
     N = 0,
     R = 1,
@@ -18,6 +19,19 @@ pub enum PV {
     C = 4,
     U = 16,
     D = 255,
+}
+impl PV {
+    pub fn from_u8(n: u8) -> Option<PV> {
+        match n {
+            0 => Some(PV::N),
+            1 => Some(PV::R),
+            2 => Some(PV::E),
+            4 => Some(PV::C),
+            16 => Some(PV::U),
+            255 => Some(PV::D),
+            _ => None,
+        }
+    }
 }
 
 pub fn pv_label(pv: PV) -> &'static str {
@@ -28,13 +42,12 @@ pub fn pv_label(pv: PV) -> &'static str {
         PV::C => "C",
         PV::U => "U",
         PV::D => "D",
-        _ => "?",
     }
 }
 
-pub type Acl = HashMap<String, Hashmap<PV, Vec<String>>>;
+pub type Acl = HashMap<String, HashMap<PV, Vec<String>>>;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct Requester {
     pub username: Option<String>,
     pub groups: Vec<String>,
@@ -43,10 +56,19 @@ pub struct Requester {
 
 pub fn load_acl() -> Acl {
     let path = CFG.base_dir.join(&CFG.auth.acl_file);
-    fs::read_to_string(&path)
+    let raw: HashMap<String, HashMap<u8, Vec<String>>> = fs::read_to_string(&path)
         .ok()
         .and_then(|c| toml::from_str(&c).ok())
-        .unwrap_or_default()
+        .unwrap_or_default();
+    raw.into_iter()
+        .map(|(scope, pvs)| {
+            let map = pvs
+                .into_iter()
+                .filter_map(|(n, targets)| PV::from_u8(n).map(|pv| (pv, targets)))
+                .collect();
+            (scope, map)
+        })
+        .collect()
 }
 
 pub fn scope_for_slug(slug: &str) -> String {
@@ -72,7 +94,16 @@ pub async fn requester_from_session(session: &Session) -> Requester {
             Requester {
                 username: username.clone(),
                 groups: user.and_then(|u| u.groups.clone()).unwrap_or_default(),
-                userpv: user.map(|u| u.userpv.clone()).unwrap_or_default(),
+                userpv: user
+                    .map(|u| {
+                        u.userpv
+                            .iter()
+                            .filter_map(|(n, scopes)| {
+                                PV::from_u8(*n).map(|pv| (pv, scopes.clone()))
+                            })
+                            .collect()
+                    })
+                    .unwrap_or_default(),
             }
         }
         None => Requester::default(),
@@ -112,15 +143,14 @@ pub fn target_matches(requester: &Requester, target: &str) -> bool {
 /// 3. walk scope -> root, first scope with a matching grant wins (highest PV among matches)
 /// 4. root falls back to the config base/auth user permissions
 /// 5. nothing matched -> N
-pub fn resolve_epv(acl: &Acl, requester: &Requester, scope: &str) -> u8 {
+pub fn resolve_epv(acl: &Acl, requester: &Requester, scope: &str) -> PV {
     if requester.groups.iter().any(|g| g == "sudo") {
-        return D;
+        return PV::D;
     }
 
     let scope = scope_for_slug(scope);
 
-    // userpv override
-    let mut best: Option<(usize, u8)> = None;
+    let mut best: Option<(usize, PV)> = None;
     for (pv, scopes) in &requester.userpv {
         for s in scopes {
             let s = scope_for_slug(s);
@@ -140,11 +170,10 @@ pub fn resolve_epv(acl: &Acl, requester: &Requester, scope: &str) -> u8 {
         return pv;
     }
 
-    // acl walk
     let mut current = scope.clone();
     loop {
         if let Some(pvs) = acl.get(&current) {
-            let mut highest: Option<u8> = None;
+            let mut highest: Option<PV> = None;
             for (pv, targets) in pvs {
                 if targets.iter().any(|t| target_matches(requester, t)) {
                     highest = Some(match highest {
@@ -163,9 +192,16 @@ pub fn resolve_epv(acl: &Acl, requester: &Requester, scope: &str) -> u8 {
         current = parent_scope(&current);
     }
 
-    // root fallback from config (ALL always matches; ALL_AUTH only when logged in)
-    let base = CFG.auth.base_user_permission.unwrap_or(N);
-    let auth = CFG.auth.auth_user_permission.unwrap_or(N);
+    let base = CFG
+        .auth
+        .base_user_permission
+        .and_then(PV::from_u8)
+        .unwrap_or(PV::N);
+    let auth = CFG
+        .auth
+        .auth_user_permission
+        .and_then(PV::from_u8)
+        .unwrap_or(PV::N);
     if requester.username.is_some() {
         base.max(auth)
     } else {
@@ -177,6 +213,6 @@ pub fn can(epv: PV, required: PV) -> bool {
     epv >= required
 }
 
-pub fn can_access(acl: &Acl, requester: &Requester, scope: &str, required: u8) -> bool {
+pub fn can_access(acl: &Acl, requester: &Requester, scope: &str, required: PV) -> bool {
     can(resolve_epv(acl, requester, scope), required)
 }
