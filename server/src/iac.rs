@@ -34,17 +34,6 @@ impl PV {
     }
 }
 
-pub fn pv_label(pv: PV) -> &'static str {
-    match pv {
-        PV::N => "N",
-        PV::R => "R",
-        PV::E => "E",
-        PV::C => "C",
-        PV::U => "U",
-        PV::D => "D",
-    }
-}
-
 pub type Acl = HashMap<String, HashMap<PV, Vec<String>>>;
 
 #[derive(Debug, Clone, Default)]

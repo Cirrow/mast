@@ -85,7 +85,7 @@ pub async fn handle_install(req: axum::Form<InstallRequest>) -> impl IntoRespons
     // PVs are stored as raw numbers (N=0 R=1 E=2 C=4 U=16 D=255); the alpha
     // characters are only used for display.
     let (base_user_permission, auth_user_permission, iac_string) = match req.acl_policy.as_str() {
-        "open" => ("4", "4", "[\"/\"]\n4 = [\"ALL\"]\n4 = [\"ALL_AUTH\"]"),
+        "open" => ("4", "4", "[\"/\"]\n4 = [\"ALL\", \"ALL_AUTH\"]"),
         "public" => ("1", "4", "[\"/\"]\n1 = [\"ALL\"]\n4 = [\"ALL_AUTH\"]"),
         "private" => ("0", "1", "[\"/\"]\n0 = [\"ALL\"]\n1 = [\"ALL_AUTH\"]"),
         _ => ("0", "0", ""), // Should be unreachable with proper input

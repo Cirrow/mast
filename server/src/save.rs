@@ -1,4 +1,5 @@
 use crate::config::CFG;
+use crate::iac::{self, PV};
 use axum::{Json, http::StatusCode};
 use git2;
 use serde::{Deserialize, Serialize};
@@ -31,29 +32,43 @@ pub async fn save(
     };
 
     let base = CFG.base_dir.join(&CFG.storage.location);
-    let canonical = crate::pages::safe_path(&base, &body.path)
+    let target_rel = format!("{}.txt", body.path);
+
+    // IAC: editing requires E, creating requires C
+    let exists = base.join(&target_rel).exists();
+    let required = if exists { PV::E } else { PV::C };
+    let requester = iac::requester_from_session(&session).await;
+    let acl = iac::load_acl();
+    if !iac::can_access(&acl, &requester, &body.path, required) {
+        return Err((
+            StatusCode::FORBIDDEN,
+            Json(serde_json::json!({"error": "forbidden"})),
+        ));
+    }
+
+    let canonical = crate::pages::safe_path(&base, &target_rel)
         .map_err(|s| (s, Json(serde_json::json!({"error": "forbidden path"}))))?;
 
-    let current_mtime = std::fs::metadata(&canonical)
-        .and_then(|m| m.modified())
-        .map_err(|_| {
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(serde_json::json!({"error": "can't read file"})),
-            )
-        })?;
-
-    let current_sha = chrono::DateTime::<chrono::Utc>::from(current_mtime)
-        .timestamp()
-        .to_string();
-
-    if !body.sha.is_empty() && body.sha != current_sha {
-        return Err((
-            StatusCode::CONFLICT,
-            Json(serde_json::json!({
-                "error": "conflict — page was edited elsewhere"
-            })),
-        ));
+    if exists {
+        let current_mtime = std::fs::metadata(&canonical)
+            .and_then(|m| m.modified())
+            .map_err(|_| {
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(serde_json::json!({"error": "can't read file"})),
+                )
+            })?;
+        let current_sha = chrono::DateTime::<chrono::Utc>::from(current_mtime)
+            .timestamp()
+            .to_string();
+        if !body.sha.is_empty() && body.sha != current_sha {
+            return Err((
+                StatusCode::CONFLICT,
+                Json(serde_json::json!({
+                    "error": "conflict — page was edited elsewhere"
+                })),
+            ));
+        }
     }
 
     std::fs::write(&canonical, &body.content).map_err(|_| {
@@ -78,7 +93,7 @@ pub async fn save(
         )
     })?;
 
-    let rel_path: String = format!("{}/{}.txt", &CFG.storage.location, body.path);
+    let rel_path: String = format!("{}/{}", &CFG.storage.location, target_rel);
     index
         .add_path(std::path::Path::new(&rel_path))
         .map_err(|_| {

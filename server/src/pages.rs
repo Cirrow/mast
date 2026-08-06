@@ -1,4 +1,5 @@
 use crate::config::{self, CFG};
+use crate::iac::{self, PV};
 use axum::{Json, extract::Path, http::StatusCode, response::Html};
 use chrono;
 use http::header::{CONTENT_TYPE, HeaderMap, HeaderValue};
@@ -6,6 +7,7 @@ use serde::Serialize;
 use std::borrow::Cow;
 use std::path::PathBuf;
 use std::sync::OnceLock;
+use tower_sessions::Session;
 
 static SHELL: OnceLock<String> = OnceLock::new();
 
@@ -17,15 +19,31 @@ pub struct RawPageResponse {
 }
 
 pub fn safe_path(base: &std::path::Path, user_path: &str) -> Result<PathBuf, StatusCode> {
-    let joined = base.join(user_path);
-    let canonical = joined.canonicalize().map_err(|_| StatusCode::NOT_FOUND)?;
     let base_canonical = base
         .canonicalize()
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-    canonical
+
+    let joined = base.join(user_path);
+    let leaf = joined.file_name().ok_or(StatusCode::FORBIDDEN)?;
+    if leaf == std::ffi::OsStr::new("..") || leaf == std::ffi::OsStr::new(".") {
+        return Err(StatusCode::FORBIDDEN);
+    }
+
+    let parent = joined.parent().unwrap_or(&base_canonical);
+    let parent_canonical = parent.canonicalize().map_err(|_| StatusCode::NOT_FOUND)?;
+    parent_canonical
         .strip_prefix(&base_canonical)
         .map_err(|_| StatusCode::FORBIDDEN)?;
-    Ok(canonical)
+
+    let final_path = parent_canonical.join(leaf);
+    match final_path.canonicalize() {
+        Ok(c) => {
+            c.strip_prefix(&base_canonical)
+                .map_err(|_| StatusCode::FORBIDDEN)?;
+            Ok(c)
+        }
+        Err(_) => Ok(final_path), // new file: parent is safe, leaf is clean
+    }
 }
 
 fn mtime_info(path: &std::path::Path) -> (String, String) {
@@ -167,8 +185,16 @@ fn extract_custom_toc(content: &str) -> (String, String) {
     }
 }
 
-pub async fn serve_wiki_page(Path(slug): Path<String>) -> Result<Html<String>, StatusCode> {
-    eprintln!("Serve wiki page entry loaded");
+pub async fn serve_wiki_page(
+    session: Session,
+    Path(slug): Path<String>,
+) -> Result<Html<String>, StatusCode> {
+    let requester = iac::requester_from_session(&session).await;
+    let acl = iac::load_acl();
+    if !iac::can_access(&acl, &requester, &slug, PV::R) {
+        return Err(StatusCode::NOT_FOUND);
+    }
+
     let base = CFG.base_dir.join(&CFG.storage.location);
     let file_path = safe_path(&base, &format!("{}.txt", slug))?;
 
@@ -181,7 +207,19 @@ pub async fn serve_wiki_page(Path(slug): Path<String>) -> Result<Html<String>, S
     Ok(Html(result))
 }
 
-pub async fn serve_raw_page(Path(slug): Path<String>) -> Result<Json<RawPageResponse>, StatusCode> {
+pub async fn serve_raw_page(
+    session: Session,
+    Path(slug): Path<String>,
+) -> Result<Json<RawPageResponse>, StatusCode> {
+    let requester = iac::requester_from_session(&session).await;
+    let acl = iac::load_acl();
+    if !iac::can_access(&acl, &requester, &slug, PV::R) {
+        return Ok(Json(RawPageResponse {
+            content: String::new(),
+            sha: String::new(),
+            status: StatusCode::NOT_FOUND.as_u16(),
+        }));
+    }
     let base = CFG.base_dir.join(&CFG.storage.location);
     let file_path = safe_path(&base, &format!("{}.txt", slug))?;
 

@@ -1,5 +1,6 @@
 mod auth;
 mod config;
+mod iac;
 mod install;
 mod pages;
 mod routes;
