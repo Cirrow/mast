@@ -81,21 +81,16 @@ pub async fn handle_install(req: axum::Form<InstallRequest>) -> impl IntoRespons
         .unwrap()
         .to_string();
 
-    // IAC initialisation. Read the IAC documentation
+    // IAC initialisation. Read the IAC documentation.
+    // PVs are stored as raw numbers (N=0 R=1 E=2 C=4 U=16 D=255); the alpha
+    // characters are only used for display.
     let (base_user_permission, auth_user_permission, iac_string) = match req.acl_policy.as_str() {
-        "open" => ("c", "c", "[[/]]\npv=\"c\"\ntarget=\"ALL\""),
-        "public" => (
-            "r",
-            "c",
-            "[[/]]\npv=\"r\"\ntarget=\"ALL\"\n[[/]]\npv=\"c\"\ntarget=\"ALL_AUTH\"",
-        ),
-        "private" => (
-            "n",
-            "r",
-            "[[/]]\npv=\"n\"\ntarget=\"ALL\"\n[[/]]\npv=\"r\"\ntarget=\"ALL_AUTH\"",
-        ),
-        _ => ("n", "n", ""), // Should be unreachable with proper input
+        "open" => ("4", "4", "[\"/\"]\n4 = [\"ALL\"]\n4 = [\"ALL_AUTH\"]"),
+        "public" => ("1", "4", "[\"/\"]\n1 = [\"ALL\"]\n4 = [\"ALL_AUTH\"]"),
+        "private" => ("0", "1", "[\"/\"]\n0 = [\"ALL\"]\n1 = [\"ALL_AUTH\"]"),
+        _ => ("0", "0", ""), // Should be unreachable with proper input
     };
+
     let auth_methods = req
         .auth_methods
         .iter()
@@ -121,14 +116,11 @@ pub async fn handle_install(req: axum::Form<InstallRequest>) -> impl IntoRespons
         r#"# ----- WIKI SETUP -----
 [basic]
 name = "{site_name}"
-wikipage_directory_prefix = "/wiki/"
 
 [auth]
-users_file = "conf/users.toml"
 auth_methods = [{auth_methods}]
-username_signup_requires_email = true
-base_user_permission = "{base_user_permission}"
-auth_user_permission = "{auth_user_permission}"
+base_user_permission = {base_user_permission}
+auth_user_permission = {auth_user_permission}
 
 [storage]
 type = "{storage_type}"
