@@ -15,7 +15,10 @@
         </label>
 
         <button class="btn btn-neutral mt-4" type="submit">Login</button>
-        <button class="btn btn-ghost mt-1" type="reset">Reset</button>
+
+        <div id="signup-link" class="hidden">
+            <a href="/signup" class="btn btn-ghost mt-1 w-full">Create an account</a>
+        </div>
     </form>
 
     <div id="signin-error" class="mt-4 alert alert-error mb-4 hidden"></div>
@@ -25,6 +28,8 @@
 <script>
     const form = document.getElementById('signin-form')
     const errorEl = document.getElementById('signin-error')
+    const signup = document.getElementById('signup-link')
+
 
     const showError = (msg) => {
         errorEl.textContent = msg
@@ -41,6 +46,9 @@
             form.classList.add('hidden')
             showError('No login method is configured.')
         }
+      if (cfg.signup_enabled) {
+        signup.classList.remove('hidden')
+      }
     })
     .catch(() => {})
 

@@ -30,9 +30,10 @@ pub struct UserInfo {
 
 pub async fn config() -> Json<serde_json::Value> {
     Json(serde_json::json!({
-        "auth_methods": CFG.auth.auth_methods.clone().unwrap_or_default(),
-        "username_signup_requires_email": CFG.auth.username_signup_requires_email,
-    }))
+    "auth_methods": CFG.auth.auth_methods.clone().unwrap_or_default(),
+    "username_signup_requires_email": CFG.auth.username_signup_requires_email,
+    "signup_enabled": CFG.auth.signup_enabled
+        }))
 }
 
 pub(crate) fn load_users() -> HashMap<String, User> {
