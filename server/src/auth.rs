@@ -112,7 +112,7 @@ pub async fn signup(
         ));
     }
 
-    let email = body.email.as_ref().map(|e| e.trim().to_string());
+    let email = body.email.as_ref().map(|e| e.trim().to_lowercase());
     if CFG.auth.username_signup_requires_email
         && email.as_deref().map(str::is_empty).unwrap_or(true)
     {
@@ -130,7 +130,17 @@ pub async fn signup(
         }
     }
 
-    let users = load_users();
+    let salt = SaltString::generate(&mut OsRng);
+    let hash = Argon2::default()
+        .hash_password(body.password.as_bytes(), &salt)
+        .map_err(|_| server_error())?
+        .to_string();
+
+    let _guard = USERS_LOCK.lock().unwrap();
+    let path = CFG.base_dir.join(&CFG.auth.users_file);
+    let mut content = std::fs::read_to_string(&path).unwrap_or_default();
+
+    let users: HashMap<String, User> = toml::from_str(&content).unwrap_or_default();
     if users.keys().any(|k| k.eq_ignore_ascii_case(&username)) {
         return Err((
             StatusCode::CONFLICT,
@@ -151,24 +161,22 @@ pub async fn signup(
         }
     }
 
-    let salt = SaltString::generate(&mut OsRng);
-    let hash = Argon2::default()
-        .hash_password(body.password.as_bytes(), &salt)
-        .map_err(|_| server_error())?
-        .to_string();
-
-    let _guard = USERS_LOCK.lock().unwrap();
-    let path = CFG.base_dir.join(&CFG.auth.users_file);
-    let mut content = std::fs::read_to_string(&path).unwrap_or_default();
     if !content.is_empty() && !content.ends_with('\n') {
         content.push('\n');
     }
     let section = match email.as_ref() {
-        Some(e) => format!("[\"{username}\"]\npwd_hash = \"{hash}\"\nemail = \"{e}\"\n"),
+        Some(e) => format!(
+            "[\"{username}\"]\npwd_hash = \"{hash}\"\nemail = {}\n",
+            toml_valid_str(e)
+        ),
         None => format!("[\"{username}\"]\npwd_hash = \"{hash}\"\n"),
     };
     content.push_str(&section);
-    std::fs::write(&path, content).map_err(|_| server_error())?;
+
+    let tmp = path.with_extension("tmp");
+    std::fs::write(&tmp, &content).map_err(|_| server_error())?;
+    std::fs::rename(&tmp, &path).map_err(|_| server_error())?;
+
     drop(_guard);
 
     session.insert("username", &username).await.unwrap();
@@ -257,4 +265,21 @@ fn user_to_info(username: String, user: &User) -> UserInfo {
         groups: user.groups.clone().unwrap_or_default(),
         userpv: user.userpv.clone(),
     }
+}
+
+fn toml_valid_str(s: &str) -> String {
+    format!("\"{}\"", s.replace('\\', "\\\\").replace('"', "\\\""))
+}
+
+fn valid_email(e: &str) -> bool {
+    !e.is_empty()
+        && e.len() <= 254
+        && !e
+            .chars()
+            .any(|c| c.is_whitespace() || c == '"' || c == '\\')
+        && e.split('@').count() == 2
+        && {
+            let (local, domain) = e.split_once('@').unwrap();
+            !local.is_empty() && domain.contains('.')
+        }
 }
