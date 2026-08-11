@@ -1,9 +1,15 @@
 use crate::config::CFG;
-use argon2::{Argon2, PasswordHash, PasswordVerifier};
+use argon2::{
+    Argon2,
+    password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, SaltString, rand_core::OsRng},
+};
 use axum::{Json, http::StatusCode, response::IntoResponse};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::sync::Mutex;
 use tower_sessions::Session;
+
+static USERS_LOCK: Mutex<()> = Mutex::new(());
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct User {
@@ -20,6 +26,13 @@ pub struct LocalLoginRequest {
     pub password: String,
 }
 
+#[derive(Deserialize)]
+pub struct SignupRequest {
+    pub username: String,
+    pub email: Option<String>,
+    pub password: String,
+}
+
 #[derive(Serialize)]
 pub struct UserInfo {
     pub username: String,
@@ -30,10 +43,15 @@ pub struct UserInfo {
 
 pub async fn config() -> Json<serde_json::Value> {
     Json(serde_json::json!({
-    "auth_methods": CFG.auth.auth_methods.clone().unwrap_or_default(),
-    "username_signup_requires_email": CFG.auth.username_signup_requires_email,
-    "signup_enabled": CFG.auth.signup_enabled
-        }))
+        "auth_methods": CFG.auth.auth_methods.clone().unwrap_or_default(),
+        "username_signup_requires_email": CFG.auth.username_signup_requires_email,
+        "signup_enabled": CFG.auth.signup_enabled,
+        "password_min_length": CFG.auth.signup_pwd_minimum_length,
+        "home": format!(
+            "{}{}",
+            CFG.basic.wikipage_directory_prefix, CFG.basic.default_wikipage
+        ),
+    }))
 }
 
 pub(crate) fn load_users() -> HashMap<String, User> {
@@ -44,22 +62,151 @@ pub(crate) fn load_users() -> HashMap<String, User> {
         .unwrap_or_default()
 }
 
+pub async fn signup(
+    session: Session,
+    Json(body): Json<SignupRequest>,
+) -> Result<Json<UserInfo>, (StatusCode, Json<serde_json::Value>)> {
+    if !CFG.auth.signup_enabled {
+        return Err((
+            StatusCode::FORBIDDEN,
+            Json(serde_json::json!({"error": "signup is disabled"})),
+        ));
+    }
+    if !CFG
+        .auth
+        .auth_methods
+        .clone()
+        .unwrap_or_default()
+        .iter()
+        .any(|m| m == "username")
+    {
+        return Err((
+            StatusCode::FORBIDDEN,
+            Json(serde_json::json!({"error": "username signup is not enabled"})),
+        ));
+    }
+
+    let username = body.username.trim().to_string();
+    let valid_username = username.len() >= 3
+        && username.len() <= 32
+        && username
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_');
+    if !valid_username {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(
+                serde_json::json!({"error": "username must be 3-32 chars: letters, numbers, '-' or '_'"
+                }),
+            ),
+        ));
+    }
+
+    if body.password.len() < CFG.auth.signup_pwd_minimum_length as usize {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(serde_json::json!({"error": format!(
+                "password must be at least {} characters",
+                CFG.auth.signup_pwd_minimum_length
+            )})),
+        ));
+    }
+
+    let email = body.email.as_ref().map(|e| e.trim().to_string());
+    if CFG.auth.username_signup_requires_email
+        && email.as_deref().map(str::is_empty).unwrap_or(true)
+    {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(serde_json::json!({"error": "email is required"})),
+        ));
+    }
+    if let Some(e) = &email {
+        if !e.contains('@') {
+            return Err((
+                StatusCode::BAD_REQUEST,
+                Json(serde_json::json!({"error": "invalid email"})),
+            ));
+        }
+    }
+
+    let users = load_users();
+    if users.keys().any(|k| k.eq_ignore_ascii_case(&username)) {
+        return Err((
+            StatusCode::CONFLICT,
+            Json(serde_json::json!({"error": "username is already taken"})),
+        ));
+    }
+    if let Some(e) = &email {
+        if users.values().any(|u| {
+            u.email
+                .as_deref()
+                .map(|ue| ue.eq_ignore_ascii_case(e))
+                .unwrap_or(false)
+        }) {
+            return Err((
+                StatusCode::CONFLICT,
+                Json(serde_json::json!({"error": "email is already in use"})),
+            ));
+        }
+    }
+
+    let salt = SaltString::generate(&mut OsRng);
+    let hash = Argon2::default()
+        .hash_password(body.password.as_bytes(), &salt)
+        .map_err(|_| server_error())?
+        .to_string();
+
+    let _guard = USERS_LOCK.lock().unwrap();
+    let path = CFG.base_dir.join(&CFG.auth.users_file);
+    let mut content = std::fs::read_to_string(&path).unwrap_or_default();
+    if !content.is_empty() && !content.ends_with('\n') {
+        content.push('\n');
+    }
+    let section = match email.as_ref() {
+        Some(e) => format!("[\"{username}\"]\npwd_hash = \"{hash}\"\nemail = \"{e}\"\n"),
+        None => format!("[\"{username}\"]\npwd_hash = \"{hash}\"\n"),
+    };
+    content.push_str(&section);
+    std::fs::write(&path, content).map_err(|_| server_error())?;
+    drop(_guard);
+
+    session.insert("username", &username).await.unwrap();
+
+    let user = User {
+        pwd_hash: Some(hash),
+        email,
+        groups: None,
+        userpv: HashMap::new(),
+    };
+    Ok(Json(user_to_info(username, &user)))
+}
+
 pub async fn login(
     session: Session,
     Json(body): Json<LocalLoginRequest>,
 ) -> Result<Json<UserInfo>, (StatusCode, Json<serde_json::Value>)> {
-    // Resolve email input to a username
+    // Resolve email-or-username to the canonical username (case-insensitive)
+    let users = load_users();
     let username = if body.username.contains('@') {
-        load_users()
+        users
             .iter()
-            .find(|(_, u)| u.email.as_deref() == Some(&body.username))
+            .find(|(_, u)| {
+                u.email
+                    .as_deref()
+                    .map(|e| e.eq_ignore_ascii_case(&body.username))
+                    .unwrap_or(false)
+            })
             .map(|(n, _)| n.clone())
-            .ok_or_else(|| unauthorized())?
+            .ok_or_else(unauthorized)?
     } else {
-        body.username.clone()
+        users
+            .keys()
+            .find(|k| k.eq_ignore_ascii_case(&body.username))
+            .cloned()
+            .ok_or_else(unauthorized)?
     };
 
-    let users = load_users();
     let user = users.get(&username).ok_or_else(unauthorized)?;
 
     let hash = user.pwd_hash.as_ref().ok_or_else(unauthorized)?;

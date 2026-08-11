@@ -136,7 +136,7 @@ fn template_vars(ctx: &PageContext) -> Vec<(&'static str, String)> {
 
 fn auth_markup(username: Option<&str>) -> String {
     match username {
-        Some(_) => r#"<li><a href="/account">Account</a></li>"#.to_string(),
+        Some(name) => format!(r#"<li><a href="/user/{name}">Account</a></li>"#),
         None => r#"<li><a href="/signin">Log in</a></li>"#.to_string(),
     }
 }
@@ -256,6 +256,38 @@ pub async fn serve_raw_page(
             status: StatusCode::NOT_FOUND.as_u16(),
         })),
     }
+}
+
+pub async fn serve_user_page(
+    session: Session,
+    Path(requested): Path<String>,
+) -> Result<Html<String>, StatusCode> {
+    let users = crate::auth::load_users();
+    let canonical = users
+        .keys()
+        .find(|k| k.eq_ignore_ascii_case(&requested))
+        .cloned()
+        .ok_or(StatusCode::NOT_FOUND)?;
+
+    let requester = iac::requester_from_session(&session).await;
+    let acl = iac::load_acl();
+    if !iac::can_access(&acl, &requester, &format!("/user/{canonical}"), PV::R) {
+        return Err(StatusCode::NOT_FOUND);
+    }
+
+    let base = CFG.base_dir.join(&CFG.storage.location);
+    let file_path = safe_path(&base, &format!("user/{canonical}.txt"))?;
+    let content = std::fs::read_to_string(&file_path).unwrap_or_else(|_| {
+        format!(
+            "<h1>{}</h1>\n\n<p>This is {}'s page. Save the page <code>user/{}</code> to customise it.</p>",
+            canonical, canonical, canonical
+        )
+    });
+    let page = converter::render_page(&content);
+    let ctx = PageContext {
+        username: requester.username.clone(),
+    };
+    Ok(Html(inject(&page.html, &page.toc, &ctx)))
 }
 
 pub async fn serve_asset(Path(path): Path<String>) -> Result<(HeaderMap, Vec<u8>), StatusCode> {

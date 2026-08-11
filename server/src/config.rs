@@ -69,8 +69,11 @@ pub struct Auth {
     pub auth_methods: Option<Vec<String>>,
     pub users_file: String,
     pub acl_file: String,
+
     pub signup_enabled: bool,
     pub username_signup_requires_email: bool,
+    pub signup_pwd_minimum_length: u16,
+
     pub base_user_permission: Option<u8>,
     pub auth_user_permission: Option<u8>,
 }
@@ -80,8 +83,11 @@ impl Default for Auth {
             auth_methods: None,
             users_file: "conf/users.toml".into(),
             acl_file: "conf/acl.toml".into(),
+
             signup_enabled: false.into(),
             username_signup_requires_email: true.into(),
+            signup_pwd_minimum_length: 8u16.into(),
+
             base_user_permission: None,
             auth_user_permission: None,
         }
@@ -193,6 +199,13 @@ impl Config {
                 None => e.push(format!("{field} must be set")),
                 _ => {}
             }
+        }
+
+        if (self.auth.signup_pwd_minimum_length == 0 || self.auth.signup_pwd_minimum_length > 128) {
+            e.push(format!(
+                "auth.signup_pwd_minimum_length must be between 1 and 128 (got '{}')",
+                self.auth.signup_pwd_minimum_length
+            ));
         }
 
         e

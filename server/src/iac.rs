@@ -121,7 +121,11 @@ pub fn target_matches(requester: &Requester, target: &str) -> bool {
         "ALL" => true,
         "ALL_AUTH" => requester.username.is_some(),
         "ALL_UNAUTH" => requester.username.is_none(),
-        t if t.starts_with("user:") => requester.username.as_deref() == Some(&t[5..]),
+        t if t.starts_with("user:") => requester
+            .username
+            .as_deref()
+            .map(|u| u.eq_ignore_ascii_case(&t[5..]))
+            .unwrap_or(false),
         group => requester.groups.iter().any(|g| g == group),
     }
 }
