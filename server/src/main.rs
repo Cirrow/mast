@@ -66,7 +66,12 @@ async fn main() {
 
     println!("Mast is running on http://{}", addr);
 
-    serve(listener, app).await.unwrap();
+    serve(
+        listener,
+        app.into_make_service_with_connect_info::<SocketAddr>(),
+    )
+    .await
+    .unwrap();
 
     async fn install_guard(
         uri: axum::http::Uri,

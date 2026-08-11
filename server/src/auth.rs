@@ -3,11 +3,18 @@ use argon2::{
     Argon2,
     password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, SaltString, rand_core::OsRng},
 };
-use axum::{Json, http::StatusCode, response::IntoResponse};
+use axum::{Json, extract::ConnectInfo, http::StatusCode, response::IntoResponse};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::sync::Mutex;
+use std::net::SocketAddr;
+use std::sync::{LazyLock, Mutex};
+use std::time::{Duration, Instant};
 use tower_sessions::Session;
+
+static SIGNUP_LIMITER: LazyLock<Mutex<HashMap<String, Vec<Instant>>>> =
+    LazyLock::new(|| Mutex::new(HashMap::new()));
+const SIGNUP_WINDOW: Duration = Duration::from_secs(3600);
+const SIGNUP_MAX: usize = 10;
 
 static USERS_LOCK: Mutex<()> = Mutex::new(());
 
@@ -41,6 +48,19 @@ pub struct UserInfo {
     pub userpv: HashMap<u8, Vec<String>>,
 }
 
+fn signup_allowed(ip: &str) -> bool {
+    let now = Instant::now();
+    let mut map = SIGNUP_LIMITER.lock().unwrap();
+    let times = map.entry(ip.to_string()).or_default();
+    times.retain(|t| now.duration_since(*t) < SIGNUP_WINDOW);
+    if times.len() >= SIGNUP_MAX {
+        false
+    } else {
+        times.push(now);
+        true
+    }
+}
+
 pub async fn config() -> Json<serde_json::Value> {
     Json(serde_json::json!({
         "auth_methods": CFG.auth.auth_methods.clone().unwrap_or_default(),
@@ -64,6 +84,7 @@ pub(crate) fn load_users() -> HashMap<String, User> {
 
 pub async fn signup(
     session: Session,
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
     Json(body): Json<SignupRequest>,
 ) -> Result<Json<UserInfo>, (StatusCode, Json<serde_json::Value>)> {
     if !CFG.auth.signup_enabled {
@@ -72,6 +93,14 @@ pub async fn signup(
             Json(serde_json::json!({"error": "signup is disabled"})),
         ));
     }
+
+    if !signup_allowed(&addr.ip().to_string()) {
+        return Err((
+            StatusCode::TOO_MANY_REQUESTS,
+            Json(serde_json::json!({"error": "too many signup attempts"})),
+        ));
+    }
+
     if !CFG
         .auth
         .auth_methods
