@@ -3,6 +3,7 @@ mod config;
 mod iac;
 mod install;
 mod pages;
+mod rate_limit;
 mod routes;
 mod save;
 use pages::serve_raw_page;

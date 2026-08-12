@@ -201,7 +201,7 @@ impl Config {
             }
         }
 
-        if (self.auth.signup_pwd_minimum_length == 0 || self.auth.signup_pwd_minimum_length > 128) {
+        if self.auth.signup_pwd_minimum_length == 0 || self.auth.signup_pwd_minimum_length > 128 {
             e.push(format!(
                 "auth.signup_pwd_minimum_length must be between 1 and 128 (got '{}')",
                 self.auth.signup_pwd_minimum_length

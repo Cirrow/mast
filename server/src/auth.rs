@@ -1,4 +1,6 @@
 use crate::config::CFG;
+use crate::rate_limit::RateLimiter;
+
 use argon2::{
     Argon2,
     password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, SaltString, rand_core::OsRng},
@@ -8,13 +10,15 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::sync::{LazyLock, Mutex};
-use std::time::{Duration, Instant};
+use std::time::Duration;
 use tower_sessions::Session;
 
-static SIGNUP_LIMITER: LazyLock<Mutex<HashMap<String, Vec<Instant>>>> =
-    LazyLock::new(|| Mutex::new(HashMap::new()));
-const SIGNUP_WINDOW: Duration = Duration::from_secs(3600);
-const SIGNUP_MAX: usize = 10;
+static SIGNUP_LIMIT: LazyLock<RateLimiter> =
+    LazyLock::new(|| RateLimiter::new(Duration::from_secs(3600), 10));
+static LOGIN_IP_LIMIT: LazyLock<RateLimiter> =
+    LazyLock::new(|| RateLimiter::new(Duration::from_secs(300), 5));
+static LOGIN_USER_LIMIT: LazyLock<RateLimiter> =
+    LazyLock::new(|| RateLimiter::new(Duration::from_secs(900), 10));
 
 static USERS_LOCK: Mutex<()> = Mutex::new(());
 
@@ -46,19 +50,6 @@ pub struct UserInfo {
     pub email: Option<String>,
     pub groups: Vec<String>,
     pub userpv: HashMap<u8, Vec<String>>,
-}
-
-fn signup_allowed(ip: &str) -> bool {
-    let now = Instant::now();
-    let mut map = SIGNUP_LIMITER.lock().unwrap();
-    let times = map.entry(ip.to_string()).or_default();
-    times.retain(|t| now.duration_since(*t) < SIGNUP_WINDOW);
-    if times.len() >= SIGNUP_MAX {
-        false
-    } else {
-        times.push(now);
-        true
-    }
 }
 
 pub async fn config() -> Json<serde_json::Value> {
@@ -94,7 +85,7 @@ pub async fn signup(
         ));
     }
 
-    if !signup_allowed(&addr.ip().to_string()) {
+    if !SIGNUP_LIMIT.hit(&addr.ip().to_string()) {
         return Err((
             StatusCode::TOO_MANY_REQUESTS,
             Json(serde_json::json!({"error": "too many signup attempts"})),
@@ -151,7 +142,7 @@ pub async fn signup(
         ));
     }
     if let Some(e) = &email {
-        if !e.contains('@') {
+        if !valid_email(e) {
             return Err((
                 StatusCode::BAD_REQUEST,
                 Json(serde_json::json!({"error": "invalid email"})),
@@ -221,8 +212,14 @@ pub async fn signup(
 
 pub async fn login(
     session: Session,
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
     Json(body): Json<LocalLoginRequest>,
 ) -> Result<Json<UserInfo>, (StatusCode, Json<serde_json::Value>)> {
+    let ip = addr.ip().to_string();
+    if !LOGIN_IP_LIMIT.is_allowed(&ip) {
+        return Err(too_many_requests());
+    }
+
     // Resolve email-or-username to the canonical username (case-insensitive)
     let users = load_users();
     let username = if body.username.contains('@') {
@@ -244,6 +241,10 @@ pub async fn login(
             .ok_or_else(unauthorized)?
     };
 
+    if !LOGIN_USER_LIMIT.is_allowed(&username) {
+        return Err(too_many_requests());
+    }
+
     let user = users.get(&username).ok_or_else(unauthorized)?;
 
     let hash = user.pwd_hash.as_ref().ok_or_else(unauthorized)?;
@@ -253,9 +254,13 @@ pub async fn login(
         .verify_password(body.password.as_bytes(), &parsed)
         .is_err()
     {
+        LOGIN_IP_LIMIT.hit(&ip);
+        LOGIN_USER_LIMIT.hit(&username);
         return Err(unauthorized());
     }
 
+    LOGIN_IP_LIMIT.reset(&ip);
+    LOGIN_USER_LIMIT.reset(&username);
     session.insert("username", &username).await.unwrap();
     Ok(Json(user_to_info(username, user)))
 }
@@ -311,4 +316,11 @@ fn valid_email(e: &str) -> bool {
             let (local, domain) = e.split_once('@').unwrap();
             !local.is_empty() && domain.contains('.')
         }
+}
+
+fn too_many_requests() -> (StatusCode, Json<serde_json::Value>) {
+    (
+        StatusCode::TOO_MANY_REQUESTS,
+        Json(serde_json::json!({"error": "too many attempts, try again later"})),
+    )
 }
