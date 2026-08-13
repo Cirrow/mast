@@ -301,7 +301,7 @@ fn user_to_info(username: String, user: &User) -> UserInfo {
     }
 }
 
-fn toml_valid_str(s: &str) -> String {
+pub(crate) fn toml_valid_str(s: &str) -> String {
     format!("\"{}\"", s.replace('\\', "\\\\").replace('"', "\\\""))
 }
 

@@ -176,6 +176,8 @@
         const messages = {
             'missing_fields': 'Please fill in all required fields.',
             'password_mismatch': 'Passwords do not match.',
+            'invalid_username': 'Username must be 3-32 characters: letters, numbers, - or _.',
+
         }
         message.textContent = messages[error] || error
         banner.classList.remove('hidden')

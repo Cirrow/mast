@@ -1,59 +1,43 @@
 <div class="relative w-full">
-  <!-- Sticky navbar -->
-  <nav class="navbar bg-base-100 md:h-15 absolute inset-s-0 top-0 z-1 shadow-base-300/20 shadow-sm">
-    <div class="w-full md:flex md:items-center md:gap-2">
-      <div class="relative flex items-center justify-between max-md:w-full">
-        <div class="navbar-start items-center justify-between max-md:w-full">
-          <a class="link text-base-content link-neutral text-xl font-bold no-underline" href="<!--MAST_HOME-->" ><!--MAST_WIKINAME--></a>
+    <!-- Sticky navbar -->
+    <nav class="navbar bg-base-100 md:h-15 absolute inset-s-0 top-0 z-1 shadow-base-300/20 shadow-sm">
+        <div class="w-full md:flex md:items-center md:gap-2">
+            <div class="relative flex items-center justify-between max-md:w-full">
+                <div class="navbar-start items-center justify-between max-md:w-full">
+                    <a class="link text-base-content link-neutral text-xl font-bold no-underline" href="<!--MAST_HOME-->"><!--MAST_WIKINAME--></a>
+                </div>
+            </div>
+
+            <!-- Desktop nav (duplicated menu, shown md+) -->
+            <div class="hidden md:flex md:navbar-end md:grow md:basis-full">
+                <ul class="menu md:menu-horizontal gap-2 p-0 text-base">
+                    <li><!--MAST_AUTH--></li>
+                    <li><a href="#">Link 2</a></li>
+                    <li>
+                        <details class="dropdown">
+                            <summary class="btn m-1">Preferences</summary>
+                            <ul class="menu dropdown-content bg-base-100 rounded-box z-1 w-52 p-2 shadow-sm">
+                                <li><a>Item 1</a></li>
+                                <li><a>Item 2</a></li>
+                            </ul>
+                        </details>
+                    </li>
+                </ul>
+            </div>
         </div>
-        <!-- Mobile hamburger toggle (pure CSS via <details>) -->
-        <details class="group md:hidden">
-          <summary class="btn btn-outline btn-secondary btn-sm btn-square list-none" aria-label="Toggle navigation">
-            <span class="icon-[tabler--menu-2] group-open:hidden size-4"></span>
-            <span class="icon-[tabler--x] hidden group-open:block size-4"></span>
-          </summary>
-          <ul id="sticky-navbar-collapse" class="menu absolute inset-x-0 top-full z-20 gap-2 bg-base-100 p-2 text-base shadow-sm">
-            <li><a href="/signin" class="auth-slot">Log in</a></li>
-            <li><a href="#">Link 2</a></li>
-          </ul>
-        </details>
-      </div>
-      <!-- Desktop nav (duplicated menu, shown md+) -->
-      <div class="hidden md:flex md:navbar-end md:grow md:basis-full">
-        <ul class="menu md:menu-horizontal gap-2 p-0 text-base">
-            <li><!--MAST_AUTH--></li>
-          <li><a href="#">Link 2</a></li>
-          <li>
-            <details class="group">
-              <summary class="list-none justify-between">Parent
-                <span class="icon-[tabler--chevron-down] group-open:rotate-180 size-4"></span>
-              </summary>
-              <ul class="gap-1 p-2">
-                <li><a href="#">Link 3</a></li>
-                <li><a href="#">Link 4</a></li>
-                <li><a href="#">Link 5</a></li>
-                <li class="menu-title">More</li>
-                <li><a href="#">Link 6</a></li>
-              </ul>
-            </details>
-          </li>
-        </ul>
-      </div>
-    </div>
-  </nav>
+    </nav>
 </div>
 
-
 <script>
-  (async () => {
-    try {
-      const res = await fetch('/api/auth/me', { credentials: 'same-origin' });
-      if (res.status === 200) {
-        document.querySelectorAll('.auth-slot').forEach(a => {
-          a.textContent = 'Account';
-          a.href = '/account';
-        });
-      }
-    } catch { }
-  })();
+    (async () => {
+        try {
+            const res = await fetch('/api/auth/me', { credentials: 'same-origin' });
+            if (res.status === 200) {
+                document.querySelectorAll('.auth-slot').forEach(a => {
+                    a.textContent = 'Profile';
+                    a.href = '/account';
+                });
+            }
+        } catch { }
+    })();
 </script>

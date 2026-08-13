@@ -72,6 +72,16 @@ pub async fn handle_install(req: axum::Form<InstallRequest>) -> impl IntoRespons
     if req.site_name.is_empty() || req.sudo_username.is_empty() || req.storage_type.is_empty() {
         return Redirect::to("/install?error=missing_fields").into_response();
     }
+
+    let username = req.sudo_username.trim().to_string();
+    let valid_username = (3..=32).contains(&username.len())
+        && username
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_');
+    if !valid_username {
+        return Redirect::to("/install?error=invalid_username").into_response();
+    }
+
     if req.sudo_pwd != req.sudo_pwd_confirm {
         return Redirect::to("/install?error=password_mismatch").into_response();
     }
@@ -141,11 +151,12 @@ shell = "default"
 
     // Write conf/users.toml
     let users_content = format!(
-        r#"[sudo]
-pwd_hash = "{hash}"
-email = "{email}"
-groups = ["sudo"]
-"#,
+        r#"[{username}]
+    pwd_hash = "{hash}"
+    email = "{email}"
+    groups = ["sudo"]
+    "#,
+        username = crate::auth::toml_valid_str(&username),
         hash = hash,
         email = req.sudo_email,
     );
