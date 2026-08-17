@@ -137,7 +137,7 @@ pub fn target_matches(requester: &Requester, target: &str) -> bool {
 /// 4. root falls back to the config base/auth user permissions
 /// 5. nothing matched -> N
 pub fn resolve_epv(acl: &Acl, requester: &Requester, scope: &str) -> PV {
-    if requester.groups.iter().any(|g| g == "sudo") {
+    if is_sudo(requester) {
         return PV::D;
     }
 
@@ -208,4 +208,8 @@ pub fn can(epv: PV, required: PV) -> bool {
 
 pub fn can_access(acl: &Acl, requester: &Requester, scope: &str, required: PV) -> bool {
     can(resolve_epv(acl, requester, scope), required)
+}
+
+pub fn is_sudo(r: &Requester) -> bool {
+    r.groups.iter().any(|g| g == "sudo")
 }
