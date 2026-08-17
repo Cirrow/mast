@@ -266,7 +266,7 @@ pub async fn login(
 }
 
 pub async fn me(session: Session) -> Result<Json<UserInfo>, StatusCode> {
-    let username: Option<String> = session.get("username").await.unwrap();
+    let username: Option<String> = session.get("username").await.unwrap_or(None);
     let username = username.ok_or(StatusCode::UNAUTHORIZED)?;
     let users = load_users();
     let user = users.get(&username).ok_or(StatusCode::UNAUTHORIZED)?;

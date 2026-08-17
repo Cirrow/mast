@@ -1,47 +1,59 @@
 <h1>Sign up</h1>
 <div class="flex flex-col items-center">
 
-    <form id="signin-form" class="fieldset bg-base-200 border-base-300 rounded-box w-md border p-4">
+    <form id="signup-form" class="fieldset bg-base-200 border-base-300 rounded-box w-md border p-4">
         <fieldset class="fieldset">
             <label class="label">Username</label>
-            <input id="signin-user" type="text" class="input validator" placeholder="Username" required autocomplete="username" />
-            <span class="validator-hint hidden">Required</span>
+            <input id="signup-user" type="text" class="input validator" placeholder="Username"
+                minlength="3" maxlength="32" pattern="[A-Za-z0-9_-]{3,32}"
+                title="3-32 characters: letters, numbers, - or _"
+                required autocomplete="username" />
+            <span class="validator-hint hidden">3-32 characters: letters, numbers, - or _</span>
 
             <label class="label">Email</label>
-            <input id="signin-user" type="text" class="input validator" placeholder="Email" required autocomplete="username" />
+            <input id="signup-email" type="email" class="input validator" placeholder="Email"
+                required autocomplete="email" />
             <span class="validator-hint hidden">Required</span>
         </fieldset>
 
-        <label class="fieldset flex">
-            <div>
+        <div class="flex gap-2">
+            <div class="grow">
                 <label class="label">Password</label>
-                <input id="signin-pass" type="password" class="input validator" placeholder="Password" required autocomplete="current-password" />
-                <span class="validator-hint hidden">Required</span>
+                <input id="signup-pass" type="password" class="input validator w-full" placeholder="Password"
+                    required autocomplete="new-password" />
+                <span class="validator-hint hidden">Minimum 8 characters</span>
             </div>
-            <div>
-                <label class="label">Confirm</label>
-                <input id="signin-pass" type="password" class="input validator" placeholder="Confirm Password" required autocomplete="current-password" />
-                <span class="validator-hint hidden">Required</span>
+            <div class="grow">
+                <label class="label">Confirm password</label>
+                <input id="signup-pass-confirm" type="password" class="input validator w-full" placeholder="Confirm password"
+                    required autocomplete="new-password" />
+                <span class="validator-hint hidden">Must match</span>
             </div>
-
-        </label>
+        </div>
 
         <button class="btn btn-neutral mt-4" type="submit">Sign Up</button>
 
-        <div id="signup-link" class="hidden">
+        <div id="signin-link">
             <a href="/signin" class="btn btn-ghost mt-1 w-full">Log in instead</a>
         </div>
     </form>
 
-    <div id="signin-error" class="mt-4 alert alert-error mb-4 hidden"></div>
+    <div role="alert" class="mt-4 alert alert-error mb-4">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 shrink-0 stroke-current" fill="none" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <span id="signup-error" class="hidden"></span>
+    </div>
 
 </div>
 
 <script>
-    const form = document.getElementById('signin-form')
-    const errorEl = document.getElementById('signin-error')
-    const signup = document.getElementById('signup-link')
-
+    const form = document.getElementById('signup-form')
+    const errorEl = document.getElementById('signup-error')
+    const userInput = document.getElementById('signup-user')
+    const emailInput = document.getElementById('signup-email')
+    const passInput = document.getElementById('signup-pass')
+    const confirmInput = document.getElementById('signup-pass-confirm')
 
     const showError = (msg) => {
         errorEl.textContent = msg
@@ -53,34 +65,49 @@
             if (!r.ok) throw new Error('config unavailable')
             return r.json()
         })
-    .then(cfg => {
-      if (!(cfg.auth_methods || []).includes('username')) {
-            form.classList.add('hidden')
-            showError('No login method is configured.')
-        }
-      if (cfg.signup_enabled) {
-        signup.classList.remove('hidden')
-      }
-    })
-    .catch(() => {})
+        .then(cfg => {
+            if (!(cfg.auth_methods || []).includes('username')) {
+                form.classList.add('hidden')
+                showError('Signup is not configured.')
+                return
+            }
+            if (!cfg.signup_enabled) {
+                form.classList.add('hidden')
+                showError('Signup is disabled. If this does not look right, contact the site\'s administrator.')
+                return
+            }
+            emailInput.required = !!cfg.username_signup_requires_email
+            const min = cfg.password_min_length ?? 8
+            passInput.minLength = min
+            confirmInput.minLength = min
+            passInput.nextElementSibling.textContent = `Minimum ${min} characters`
+        })
+        .catch(() => {})
 
     form.addEventListener('submit', e => {
         e.preventDefault()
-        const username = document.getElementById('signin-user').value
-        const password = document.getElementById('signin-pass').value
         errorEl.classList.add('hidden')
 
-        fetch('/api/auth/login', {
+        if (passInput.value !== confirmInput.value) {
+            showError('Passwords do not match.')
+            return
+        }
+
+        fetch('/api/auth/signup', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username, password })
+            body: JSON.stringify({
+                username: userInput.value,
+                email: emailInput.value || null,
+                password: passInput.value,
+            })
         }).then(async r => {
-        if (r.ok) {
-            window.location.href = '/wiki/home'
-        } else {
-            const err = await r.json().catch(() => ({}))
-            showError(err.error || 'Invalid credentials')
-        }
+            if (r.ok) {
+                window.location.href = '/wiki/home'
+            } else {
+                const err = await r.json().catch(() => ({}))
+                showError(err.error || 'Signup failed')
+            }
         }).catch(() => showError('Network error'))
     })
 </script>
