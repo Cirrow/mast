@@ -57,6 +57,7 @@ async fn main() {
         //routings
         .route("/wiki/{*slug}", get(pages::serve_wiki_page))
         .route("/user/{username}", get(pages::serve_user_page))
+        .route("/admin", get(pages::serve_admin_panel))
         .route("/{slug}", get(pages::serve_static_page))
         //layers
         .layer(session_layer)

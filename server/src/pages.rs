@@ -176,6 +176,20 @@ fn resolve_includes(html: &str) -> String {
     result
 }
 
+pub async fn serve_admin_panel(session: Session) -> Result<Html<String>, StatusCode> {
+    let requester = iac::requester_from_session(&session).await;
+    if !iac::is_sudo(&requester) {
+        return Err(StatusCode::NOT_FOUND);
+    }
+    let base = CFG.base_dir.join("src/shells").join(&CFG.shell.shell);
+    let content =
+        std::fs::read_to_string(base.join("admin.html")).map_err(|_| StatusCode::NOT_FOUND)?;
+    let ctx = PageContext {
+        username: requester.username.clone(),
+    };
+    Ok(Html(inject(&content, "", &ctx)))
+}
+
 pub async fn serve_static_page(
     session: Session,
     Path(slug): Path<String>,
