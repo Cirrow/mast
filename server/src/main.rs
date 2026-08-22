@@ -40,7 +40,6 @@ async fn main() {
         .route("/api/raw/{*slug}", get(serve_raw_page))
         .route("/api/routes", get(routes::get_routes))
         // auth api calls
-        .route("/api/auth/config", get(auth::config))
         .route("/api/auth/login", post(auth::login))
         .route("/api/auth/signup", post(auth::signup))
         .route("/api/auth/me", get(auth::me))
@@ -57,7 +56,12 @@ async fn main() {
         //routings
         .route("/wiki/{*slug}", get(pages::serve_wiki_page))
         .route("/user/{username}", get(pages::serve_user_page))
+        //admin panel
         .route("/admin", get(pages::serve_admin_panel))
+        .route(
+            "/api/admin/config",
+            get(pages::get_config).put(pages::put_config),
+        )
         .route("/{slug}", get(pages::serve_static_page))
         //layers
         .layer(session_layer)

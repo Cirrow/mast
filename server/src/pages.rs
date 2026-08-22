@@ -194,6 +194,97 @@ pub async fn serve_admin_panel(session: Session) -> Result<Html<String>, StatusC
     Ok(Html(inject(&content, "", &ctx)))
 }
 
+pub async fn get_config(
+    session: Session,
+    axum::extract::Query(params): axum::extract::Query<std::collections::HashMap<String, String>>,
+) -> Result<Json<serde_json::Value>, StatusCode> {
+    let requester = iac::requester_from_session(&session).await;
+    let is_admin = iac::is_sudo(&requester);
+
+    let requested: Vec<&str> = params
+        .get("sections")
+        .map(|s| s.split(',').collect())
+        .unwrap_or_default();
+
+    let config_json = serde_json::to_value(&*CFG).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let sections: Vec<serde_json::Value> = config::config_meta()
+        .into_iter()
+        .filter(|s| {
+            if is_admin {
+                return true;
+            }
+            requested.contains(&s.key)
+        })
+        .map(|section| {
+            let fields: Vec<serde_json::Value> = section
+                .fields
+                .into_iter()
+                .map(|field| {
+                    let pointer = format!("/{}/{}", section.key, field.key);
+                    let value = config_json
+                        .pointer(&pointer)
+                        .cloned()
+                        .unwrap_or(serde_json::Value::Null);
+                    serde_json::json!({
+                        "key": field.key,
+                        "label": field.label,
+                        "description": field.description,
+                        "value": value,
+                    })
+                })
+                .collect();
+            serde_json::json!({
+                "key": section.key,
+                "label": section.label,
+                "fields": fields,
+            })
+        })
+        .collect();
+
+    Ok(Json(serde_json::json!(sections)))
+}
+
+pub async fn put_config(
+    session: Session,
+    Json(update): Json<serde_json::Value>,
+) -> Result<Json<serde_json::Value>, StatusCode> {
+    let requester = iac::requester_from_session(&session).await;
+    if !iac::is_sudo(&requester) {
+        return Err(StatusCode::NOT_FOUND);
+    }
+
+    let mut current = serde_json::to_value(&*CFG).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    for key in ["basic", "auth", "storage", "shell"] {
+        if let Some(val) = update.get(key) {
+            if let Some(obj) = current.get_mut(key) {
+                *obj = val.clone();
+            }
+        }
+    }
+
+    let new_config: config::Config =
+        serde_json::from_value(current).map_err(|_| StatusCode::BAD_REQUEST)?;
+
+    let errors = new_config.validate();
+    if !errors.is_empty() {
+        return Ok(Json(serde_json::json!({
+            "success": false,
+            "errors": errors,
+        })));
+    }
+
+    let toml =
+        toml::to_string_pretty(&new_config).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    std::fs::write(config::config_path(), toml).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    Ok(Json(serde_json::json!({
+        "success": true,
+        "message": "Configuration saved. Restart the server to apply changes.",
+    })))
+}
+
 fn status_markup(severity: &str, count: usize, message: &str) -> String {
     match severity {
         "update" => format!(

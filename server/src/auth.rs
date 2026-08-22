@@ -52,19 +52,6 @@ pub struct UserInfo {
     pub userpv: HashMap<u8, Vec<String>>,
 }
 
-pub async fn config() -> Json<serde_json::Value> {
-    Json(serde_json::json!({
-        "auth_methods": CFG.auth.auth_methods.clone().unwrap_or_default(),
-        "username_signup_requires_email": CFG.auth.username_signup_requires_email,
-        "signup_enabled": CFG.auth.signup_enabled,
-        "password_min_length": CFG.auth.signup_pwd_minimum_length,
-        "home": format!(
-            "{}{}",
-            CFG.basic.wikipage_directory_prefix, CFG.basic.default_wikipage
-        ),
-    }))
-}
-
 pub(crate) fn load_users() -> HashMap<String, User> {
     let path = CFG.base_dir.join(&CFG.auth.users_file);
     std::fs::read_to_string(&path)

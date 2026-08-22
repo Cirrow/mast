@@ -60,24 +60,27 @@
         errorEl.classList.remove('hidden')
     }
 
-    fetch('/api/auth/config')
+    fetch('/api/config?sections=auth')
         .then(r => {
             if (!r.ok) throw new Error('config unavailable')
             return r.json()
         })
         .then(cfg => {
-            if (!(cfg.auth_methods || []).includes('username')) {
+            const authFields = {};
+            cfg.forEach(s => s.fields.forEach(f => authFields[f.key] = f.value));
+
+            if (!(authFields.auth_methods || []).includes('username')) {
                 form.classList.add('hidden')
                 showError('Signup is not configured.')
                 return
             }
-            if (!cfg.signup_enabled) {
+            if (!authFields.signup_enabled) {
                 form.classList.add('hidden')
                 showError('Signup is disabled. If this does not look right, contact the site\'s administrator.')
                 return
             }
-            emailInput.required = !!cfg.username_signup_requires_email
-            const min = cfg.password_min_length ?? 8
+            emailInput.required = !!authFields.username_signup_requires_email
+            const min = authFields.signup_pwd_minimum_length ?? 8
             passInput.minLength = min
             confirmInput.minLength = min
             passInput.nextElementSibling.textContent = `Minimum ${min} characters`

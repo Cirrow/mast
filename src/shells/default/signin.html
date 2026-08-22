@@ -36,20 +36,23 @@
         errorEl.classList.remove('hidden')
     }
 
-    fetch('/api/auth/config')
+    fetch('/api/config?sections=auth')
         .then(r => {
             if (!r.ok) throw new Error('config unavailable')
             return r.json()
         })
-    .then(cfg => {
-      if (!(cfg.auth_methods || []).includes('username')) {
-            form.classList.add('hidden')
-            showError('No login method is configured.')
-        }
-      if (cfg.signup_enabled) {
-        signup.classList.remove('hidden')
-      }
-    })
+        .then(cfg => {
+            const authFields = {};
+            cfg.forEach(s => s.fields.forEach(f => authFields[f.key] = f.value));
+
+            if (!(authFields.auth_methods || []).includes('username')) {
+                form.classList.add('hidden')
+                showError('No login method is configured.')
+            }
+            if (authFields.signup_enabled) {
+                signup.classList.remove('hidden')
+            }
+        })
     .catch(() => {})
 
     form.addEventListener('submit', e => {
