@@ -4,6 +4,28 @@ use std::path::{Path, PathBuf};
 use std::sync::LazyLock;
 use std::sync::atomic::{AtomicBool, Ordering};
 
+pub struct FieldMeta {
+    pub key: &'static str,
+    pub label: &'static str,
+    pub description: &'static str,
+}
+
+pub struct SectionMeta {
+    pub key: &'static str,
+    pub label: &'static str,
+    pub fields: Vec<FieldMeta>,
+}
+
+macro_rules! f {
+    ($key:ident, $label:expr, $desc:expr) => {
+        FieldMeta {
+            key: stringify!($key),
+            label: $label,
+            description: $desc,
+        }
+    };
+}
+
 pub static MAST_INIT: AtomicBool = AtomicBool::new(false);
 
 /// Run once at server start. Checks if mast-config.toml exists.
@@ -239,4 +261,100 @@ impl Config {
         }
         e
     }
+}
+
+pub fn config_meta() -> Vec<SectionMeta> {
+    vec![
+        SectionMeta {
+            key: "basic",
+            label: "Basic",
+            fields: vec![
+                f!(
+                    name,
+                    "Name",
+                    "The name of your wiki, displayed by default in the header and tab titles"
+                ),
+                f!(
+                    image_as_home,
+                    "Display image as home",
+                    "Use an image as home page button on the header instead of the wiki name"
+                ),
+                f!(
+                    image_path,
+                    "Image Path",
+                    "Required when image_as_home option is enabled. File path to the home page image you will use."
+                ),
+                f!(pinned_pages, "Pinned Pages", "Pages pinned to the sidebar"),
+                f!(
+                    wikipage_directory_prefix,
+                    "Page Directory Prefix",
+                    "URL prefix for wiki pages (must start and end with /)"
+                ),
+                f!(
+                    default_wikipage,
+                    "Default Page",
+                    "Page shown when visiting the wiki root"
+                ),
+            ],
+        },
+        SectionMeta {
+            key: "auth",
+            label: "Authentication",
+            fields: vec![
+                f!(
+                    auth_methods,
+                    "Auth Methods",
+                    "Enabled authentication methods"
+                ),
+                f!(users_file, "Users File", "Path to the users TOML file"),
+                f!(acl_file, "ACL File", "Path to the access control list file"),
+                f!(
+                    signup_enabled,
+                    "Signup Enabled",
+                    "Allow new users to register accounts"
+                ),
+                f!(
+                    username_signup_requires_email,
+                    "Email Required",
+                    "Require an email address when signing up"
+                ),
+                f!(
+                    signup_pwd_minimum_length,
+                    "Min Password Length",
+                    "Minimum characters for signup passwords"
+                ),
+                f!(
+                    base_user_permission,
+                    "Base User Permission",
+                    "Permission level for anonymous users"
+                ),
+                f!(
+                    auth_user_permission,
+                    "Auth User Permission",
+                    "Permission level for logged-in users"
+                ),
+            ],
+        },
+        SectionMeta {
+            key: "storage",
+            label: "Storage",
+            fields: vec![
+                f!(storage_type, "Storage Type", "Backend storage engine"),
+                f!(
+                    location,
+                    "Storage Location",
+                    "Path to the wiki data directory"
+                ),
+            ],
+        },
+        SectionMeta {
+            key: "shell",
+            label: "Shell",
+            fields: vec![f!(
+                shell,
+                "Active Shell",
+                "UI template used for rendering pages"
+            )],
+        },
+    ]
 }
