@@ -184,10 +184,43 @@ pub async fn serve_admin_panel(session: Session) -> Result<Html<String>, StatusC
     let base = CFG.base_dir.join("src/shells").join(&CFG.shell.shell);
     let content =
         std::fs::read_to_string(base.join("admin.html")).map_err(|_| StatusCode::NOT_FOUND)?;
+    let content = content.replace(
+        "<!--MAST_ADMIN_STATUS-->",
+        &status_markup("operational", 0, "Wiki is operational"),
+    );
     let ctx = PageContext {
         username: requester.username.clone(),
     };
     Ok(Html(inject(&content, "", &ctx)))
+}
+
+fn status_markup(severity: &str, count: usize, message: &str) -> String {
+    match severity {
+        "update" => format!(
+            r#"<div class="inline-grid *:[grid-area:1/1]">
+               <div class="status status-info animate-ping"></div>
+               <div class="status status-info"></div>
+               </div> {message}"#
+        ),
+        "warning" => format!(
+            r#"<div class="inline-grid *:[grid-area:1/1]">\
+               <div class="status status-warning animate-ping"></div>\
+               <div class="status status-warning"></div>\
+               </div> {count} warning(s) — <a href="/admin/logs" class="link">open logs</a>"#
+        ),
+        "error" => format!(
+            r#"<div class="inline-grid *:[grid-area:1/1]">\
+               <div class="status status-error animate-ping"></div>\
+               <div class="status status-error"></div>\
+               </div> {count} error(s) — <a href="/admin/logs" class="link">open logs</a>"#
+        ),
+        _ => format!(
+            r#"<div class="inline-grid *:[grid-area:1/1]">
+               <div class="status status-success animate-ping"></div>
+               <div class="status status-success"></div>
+               </div> Wiki is operational"#
+        ),
+    }
 }
 
 pub async fn serve_static_page(
