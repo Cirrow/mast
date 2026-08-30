@@ -62,6 +62,10 @@ async fn main() {
             "/api/admin/config",
             get(pages::get_config).put(pages::put_config),
         )
+        .route(
+            "/admin/configmanage",
+            get(pages::serve_config_manage).post(pages::handle_config_manage),
+        )
         .route("/{slug}", get(pages::serve_static_page))
         //layers
         .layer(session_layer)
