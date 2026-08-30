@@ -1,6 +1,6 @@
 use crate::config::{self, CFG};
 use crate::iac::{self, PV};
-use axum::{Json, extract::Path, http::StatusCode, response::Html};
+use axum::{Form, Json, extract::Path, http::StatusCode, response::Html};
 use chrono;
 use http::header::{CONTENT_TYPE, HeaderMap, HeaderValue};
 use serde::Serialize;
@@ -283,6 +283,288 @@ pub async fn put_config(
         "success": true,
         "message": "Configuration saved. Restart the server to apply changes.",
     })))
+}
+
+fn render_field(key: &str, label: &str, desc: &str, value: &serde_json::Value) -> String {
+    let id = format!("cfg-{key}");
+    let input = match value {
+        serde_json::Value::Bool(b) => {
+            format!(
+                r#"<input type="checkbox" name="{key}" id="{id}" class="toggle" {} />"#,
+                if *b { "checked" } else { "" }
+            )
+        }
+        serde_json::Value::Number(n) => {
+            format!(
+                r#"<input type="number" name="{key}" id="{id}" value="{n}" class="input input-bordered w-full" />"#
+            )
+        }
+        serde_json::Value::Array(arr) => {
+            let csv = arr
+                .iter()
+                .filter_map(|v| v.as_str())
+                .collect::<Vec<_>>()
+                .join(", ");
+            format!(
+                r#"<textarea name="{key}" id="{id}" class="textarea textarea-bordered w-full">{csv}</textarea>"#
+            )
+        }
+        _ => {
+            let val = value.as_str().unwrap_or("");
+            format!(
+                r#"<input type="text" name="{key}" id="{id}" value="{val}" class="input input-bordered w-full" />"#
+            )
+        }
+    };
+    format!(
+        r#"<div class="form-control mb-3">
+            <label for="{id}" class="label"><span class="label-text font-medium">{label}</span></label>
+            <p class="text-sm opacity-60 mb-1">{desc}</p>
+            {input}
+        </div>"#
+    )
+}
+
+fn render_config_form(content: &str, sections: Vec<serde_json::Value>) -> String {
+    let sections_html = sections
+        .into_iter()
+        .map(|section| {
+            let label = section["label"].as_str().unwrap_or("");
+            let fields_html = section["fields"]
+                .as_array()
+                .map(|fields| {
+                    fields
+                        .iter()
+                        .map(|f| {
+                            render_field(
+                                f["key"].as_str().unwrap_or(""),
+                                f["label"].as_str().unwrap_or(""),
+                                f["description"].as_str().unwrap_or(""),
+                                &f["value"],
+                            )
+                        })
+                        .collect::<Vec<_>>()
+                        .join("\n")
+                })
+                .unwrap_or_default();
+            format!(
+                r#"<div class="card bg-base-100 shadow-sm">
+                <div class="card-body">
+                    <h2 class="card-title">{label}</h2>
+                    {fields_html}
+                </div>
+            </div>"#
+            )
+        })
+        .collect::<Vec<_>>()
+        .join("\n");
+    content.replace("<!--MAST_CONFIG_SECTIONS-->", &sections_html)
+}
+
+pub async fn serve_config_manage(session: Session) -> Result<Html<String>, StatusCode> {
+    let requester = iac::requester_from_session(&session).await;
+    if !iac::is_sudo(&requester) {
+        return Err(StatusCode::NOT_FOUND);
+    }
+    let base = CFG.base_dir.join("src/shells").join(&CFG.shell.shell);
+    let content = std::fs::read_to_string(base.join("admin/configmanage.html"))
+        .map_err(|_| StatusCode::NOT_FOUND)?;
+
+    let config_json = serde_json::to_value(&*CFG).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let sections: Vec<serde_json::Value> = config::config_meta()
+        .into_iter()
+        .map(|section| {
+            let fields: Vec<serde_json::Value> = section
+                .fields
+                .into_iter()
+                .map(|field| {
+                    let pointer = format!("/{}/{}", section.key, field.key);
+                    let value = config_json
+                        .pointer(&pointer)
+                        .cloned()
+                        .unwrap_or(serde_json::Value::Null);
+                    serde_json::json!({
+                        "key": field.key,
+                        "label": field.label,
+                        "description": field.description,
+                        "value": value,
+                    })
+                })
+                .collect();
+            serde_json::json!({
+                "key": section.key,
+                "label": section.label,
+                "fields": fields,
+            })
+        })
+        .collect();
+
+    let rendered = render_config_form(&content, sections);
+    let ctx = PageContext {
+        username: requester.username.clone(),
+    };
+    Ok(Html(inject(&rendered, "", &ctx)))
+}
+
+pub async fn handle_config_manage(
+    session: Session,
+    Form(data): Form<std::collections::HashMap<String, String>>,
+) -> Result<Html<String>, StatusCode> {
+    let requester = iac::requester_from_session(&session).await;
+    if !iac::is_sudo(&requester) {
+        return Err(StatusCode::NOT_FOUND);
+    }
+
+    let mut current = serde_json::to_value(&*CFG).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    for (flat_key, raw_val) in &data {
+        let parts: Vec<&str> = flat_key.splitn(2, '.').collect();
+        if parts.len() != 2 {
+            continue;
+        }
+        let (section, field) = (parts[0], parts[1]);
+
+        if let Some(obj) = current.get_mut(section) {
+            if let Some(field_val) = obj.get(field) {
+                let new_val = match field_val {
+                    serde_json::Value::Bool(_) => serde_json::Value::Bool(raw_val == "on"),
+                    serde_json::Value::Number(n) => {
+                        if n.is_f64() {
+                            raw_val
+                                .parse::<f64>()
+                                .map(|v| serde_json::json!(v))
+                                .unwrap_or_else(|_| field_val.clone())
+                        } else {
+                            raw_val
+                                .parse::<i64>()
+                                .map(|v| serde_json::json!(v))
+                                .unwrap_or_else(|_| field_val.clone())
+                        }
+                    }
+                    serde_json::Value::Array(_) => {
+                        let arr: Vec<serde_json::Value> = raw_val
+                            .split(',')
+                            .map(|s| serde_json::json!(s.trim()))
+                            .collect();
+                        serde_json::Value::Array(arr)
+                    }
+                    _ => serde_json::json!(raw_val),
+                };
+                if let Some(v) = obj.get_mut(field) {
+                    *v = new_val;
+                }
+            }
+        }
+    }
+
+    let new_config: config::Config =
+        serde_json::from_value(current).map_err(|_| StatusCode::BAD_REQUEST)?;
+
+    let errors = new_config.validate();
+    if !errors.is_empty() {
+        let base = CFG.base_dir.join("src/shells").join(&CFG.shell.shell);
+        let content = std::fs::read_to_string(base.join("admin/configmanage.html"))
+            .map_err(|_| StatusCode::NOT_FOUND)?;
+
+        let config_json =
+            serde_json::to_value(&new_config).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+        let sections: Vec<serde_json::Value> = config::config_meta()
+            .into_iter()
+            .map(|section| {
+                let fields: Vec<serde_json::Value> = section
+                    .fields
+                    .into_iter()
+                    .map(|field| {
+                        let pointer = format!("/{}/{}", section.key, field.key);
+                        let value = config_json
+                            .pointer(&pointer)
+                            .cloned()
+                            .unwrap_or(serde_json::Value::Null);
+                        serde_json::json!({
+                            "key": field.key,
+                            "label": field.label,
+                            "description": field.description,
+                            "value": value,
+                        })
+                    })
+                    .collect();
+                serde_json::json!({
+                    "key": section.key,
+                    "label": section.label,
+                    "fields": fields,
+                })
+            })
+            .collect();
+
+        let error_html = format!(
+            r#"<div class="alert alert-error mb-4">{}</div>"#,
+            errors
+                .iter()
+                .map(|e| format!("<p>{e}</p>"))
+                .collect::<Vec<_>>()
+                .join("")
+        );
+        let content_with_error = content.replace("<!--MAST_CONFIG_SECTIONS-->", &error_html);
+        let rendered = render_config_form(&content_with_error, sections);
+        // re-render with error prepended — actually simpler: just inject error above the form
+        let ctx = PageContext {
+            username: requester.username.clone(),
+        };
+        return Ok(Html(inject(&rendered, "", &ctx)));
+    }
+
+    let toml =
+        toml::to_string_pretty(&new_config).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    std::fs::write(config::config_path(), toml).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let base = CFG.base_dir.join("src/shells").join(&CFG.shell.shell);
+    let content = std::fs::read_to_string(base.join("admin/configmanage.html"))
+        .map_err(|_| StatusCode::NOT_FOUND)?;
+
+    let config_json =
+        serde_json::to_value(&new_config).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let sections: Vec<serde_json::Value> = config::config_meta()
+        .into_iter()
+        .map(|section| {
+            let fields: Vec<serde_json::Value> = section
+                .fields
+                .into_iter()
+                .map(|field| {
+                    let pointer = format!("/{}/{}", section.key, field.key);
+                    let value = config_json
+                        .pointer(&pointer)
+                        .cloned()
+                        .unwrap_or(serde_json::Value::Null);
+                    serde_json::json!({
+                        "key": field.key,
+                        "label": field.label,
+                        "description": field.description,
+                        "value": value,
+                    })
+                })
+                .collect();
+            serde_json::json!({
+                "key": section.key,
+                "label": section.label,
+                "fields": fields,
+            })
+        })
+        .collect();
+
+    let success_html = r#"<div class="alert alert-success mb-4">Configuration saved. Restart the server to apply changes.</div>"#;
+    let mut rendered = render_config_form(&content, sections);
+    // Prepend success message before the first card
+    rendered = rendered.replace(
+        "<div class=\"card bg-base-100 shadow-sm\">",
+        &format!("{success_html}<div class=\"card bg-base-100 shadow-sm\">"),
+    );
+    let ctx = PageContext {
+        username: requester.username.clone(),
+    };
+    Ok(Html(inject(&rendered, "", &ctx)))
 }
 
 fn status_markup(severity: &str, count: usize, message: &str) -> String {
