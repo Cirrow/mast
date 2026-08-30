@@ -4,13 +4,35 @@
 
 <div class="grid grid-cols-3 gap-4">
 
+    <div class="col-span-2 card bg-base-100 shadow-sm">
+        <div class="stats stats-vertical lg:stats-horizontal">
+          <div class="stat">
+            <div class="stat-title">Current Mastwiki version</div>
+            <div class="stat-value">0.4.3</div>
+            <div class="stat-desc">Latest (Released September 3rd, 2026)</div>
+          </div>
+
+          <div class="stat">
+            <div class="stat-title">New Users</div>
+            <div class="stat-value">4,200</div>
+            <div class="stat-desc">↗︎ 400 (22%)</div>
+          </div>
+
+          <div class="stat">
+            <div class="stat-title">New Registers</div>
+            <div class="stat-value">1,200</div>
+            <div class="stat-desc">↘︎ 90 (14%)</div>
+          </div>
+        </div>
+        </div>
+
     <div class="card bg-base-100 card-md shadow-sm">
         <div class="card-body">
 
-            <h2 class="not-prose card-title">Configuration manager</h2>
+            <h2 class="not-prose card-title"><span class="icon-[pajamas--preferences]"></span>Configuration manager</h2>
             <p>Granular config manager for the wiki.</p>
             <div class="justify-end card-actions">
-                <button class="btn btn-primary">Manage</button>
+                <a href="/admin/configmanage" class="btn btn-primary">Manage</a>
             </div>
         </div>
    </div>
