@@ -1,14 +1,13 @@
 <h1>Configuration Manager</h1>
 <p><a href="/admin">← Return to admin page</a></p>
 
-<p>This is the configuration manager for the wiki. Make sure to click SAVE at the bottom so your changes are saved.</p>
+<p>This is the configuration manager for the wiki. Make sure to click SAVE at the bottom so your changes are saved. You can hover over each fields to get a </p>
 
 <form method="POST" action="/admin/configmanage" id="config-form">
 
-
     <div class="divider"><h2 class="not-prose">BASIC</h2></div>
     <fieldset class="fieldset bg-base-200 border-base-300 rounded-box border p-4">
-        <div class="card-body">
+        <div class="card-body grid grid-cols-3 gap-3">
             <!--MAST_FIELDS:basic-->
         </div>
     </fieldset>
@@ -41,3 +40,29 @@
         <button type="submit" class="btn btn-primary">Save</button>
     </div>
 </form>
+
+<div id="unsaved-toast" class="toast toast-start hidden bg-black rounded-md p-4 w-sm">
+    <span class="text-white"><span class="icon-[clarity--warning-line]"></span>Warning: unsaved changes</span>
+    <button id="scroll-bottom-btn" class="btn btn-sm btn-outline bg-white">Scroll to save</button>
+</div>
+
+<script>
+const form = document.getElementById('config-form');
+const toast = document.getElementById('unsaved-toast');
+const scrollBtn = document.getElementById('scroll-bottom-btn');
+
+const initialState = new URLSearchParams(new FormData(form)).toString();
+
+function checkDirty() {
+  const currentState = new URLSearchParams(new FormData(form)).toString();
+  toast.classList.toggle('hidden', currentState === initialState);
+}
+
+form.addEventListener('input', checkDirty);
+form.addEventListener('change', checkDirty);
+form.addEventListener('submit', () => toast.classList.add('hidden'));
+
+scrollBtn.addEventListener('click', () => {
+    window.scrollTo(0, document.body.scrollHeight);
+});
+</script>

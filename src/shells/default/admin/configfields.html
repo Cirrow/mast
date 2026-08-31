@@ -1,21 +1,18 @@
 <!--MAST_FIELD:text-->
-<div class="form-control mb-3">
-    <fieldset class="fieldset">
-    <legend for={id} class="fieldset-legend">{label}</legend>
-
-    <input type="text" name="{key}" id="{id}" value="{value}" class="input input-bordered w-full" />
-
-    <p class="label">{description}</p>
-
-    </fieldset>
-</div>
+<label class="input form-controls">
+  <legend for={id} class="tooltip label" data-tip="{description}"><strong>{label}</strong></legend>
+  <input type="text" name="{key}" id="{id}" value="{value}" class="input input-bordered w-full grow" />
+</label>
 <!--/MAST_FIELD:text-->
 
 <!--MAST_FIELD:bool-->
-<div class="form-control mb-3">
-    <label for="{id}" class="label"><span class="label-text font-medium">{label}</span></label>
-    <p class="text-sm opacity-60 mb-1">{description}</p>
-    <input type="checkbox" name="{key}" id="{id}" class="toggle" {checked} />
+<div class="form-control">
+    <fieldset class="fieldset">
+    <legend for="{id}" class="fieldset-legend">{label}</legend>
+    <input type="hidden" name="{key}" value="off" />
+    <input type="checkbox" name="{key}" id="{id}" value="on" class="toggle" {checked} />
+    <p class="label">{description}</p>
+    </fieldset>
 </div>
 <!--/MAST_FIELD:bool-->
 
