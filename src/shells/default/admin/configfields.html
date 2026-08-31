@@ -1,0 +1,36 @@
+<!--MAST_FIELD:text-->
+<div class="form-control mb-3">
+    <fieldset class="fieldset">
+    <legend for={id} class="fieldset-legend">{label}</legend>
+
+    <input type="text" name="{key}" id="{id}" value="{value}" class="input input-bordered w-full" />
+
+    <p class="label">{description}</p>
+
+    </fieldset>
+</div>
+<!--/MAST_FIELD:text-->
+
+<!--MAST_FIELD:bool-->
+<div class="form-control mb-3">
+    <label for="{id}" class="label"><span class="label-text font-medium">{label}</span></label>
+    <p class="text-sm opacity-60 mb-1">{description}</p>
+    <input type="checkbox" name="{key}" id="{id}" class="toggle" {checked} />
+</div>
+<!--/MAST_FIELD:bool-->
+
+<!--MAST_FIELD:number-->
+<div class="form-control mb-3">
+    <label for="{id}" class="label"><span class="label-text font-medium">{label}</span></label>
+    <p class="text-sm opacity-60 mb-1">{description}</p>
+    <input type="number" name="{key}" id="{id}" value="{value}" class="input input-bordered w-full" />
+</div>
+<!--/MAST_FIELD:number-->
+
+<!--MAST_FIELD:array-->
+<div class="form-control mb-3">
+    <label for="{id}" class="label"><span class="label-text font-medium">{label}</span></label>
+    <p class="text-sm opacity-60 mb-1">{description}</p>
+    <textarea name="{key}" id="{id}" class="textarea textarea-bordered w-full">{value}</textarea>
+</div>
+<!--/MAST_FIELD:array-->
