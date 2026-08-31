@@ -292,7 +292,7 @@ fn substitute(
     desc: &str,
     value: &serde_json::Value,
 ) -> String {
-    let id = format!("cfg-{key}");
+    let id = format!("cfg-{}", key.replace('.', "-"));
     let mut out = template
         .replace("{key}", key)
         .replace("{label}", label)
@@ -326,6 +326,7 @@ fn extract_block(content: &str, name: &str) -> Option<String> {
 
 fn render_field(
     fields_html: &str,
+    section_key: &str,
     field: &config::FieldMeta,
     value: &serde_json::Value,
 ) -> Option<String> {
@@ -336,9 +337,10 @@ fn render_field(
         _ => "text",
     };
     let block = extract_block(fields_html, name)?;
+    let dotted = format!("{section_key}.{}", field.key);
     Some(substitute(
         &block,
-        field.key,
+        &dotted,
         field.label,
         field.description,
         value,
@@ -362,7 +364,7 @@ fn render_config_sections(
                 .pointer(&pointer)
                 .cloned()
                 .unwrap_or(serde_json::Value::Null);
-            rendered.push_str(&render_field(&fields_html, field, &value).unwrap_or_default());
+            rendered.push_str(&render_field(&fields_html, section.key, field, &value).unwrap_or_default());
         }
         out = out.replace(&format!("<!--MAST_FIELDS:{}-->", section.key), &rendered);
     }
