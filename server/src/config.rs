@@ -288,7 +288,7 @@ pub fn config_meta() -> Vec<SectionMeta> {
                 f!(
                     wikipage_directory_prefix,
                     "Page Directory Prefix",
-                    "URL prefix for wiki pages (must start and end with /)"
+                    "URL prefix for default wiki pages, must start and end with a slash. Examples: /article/, /blog/, /news/"
                 ),
                 f!(
                     default_wikipage,
