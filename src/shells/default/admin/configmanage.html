@@ -1,5 +1,8 @@
 <h1>Configuration Manager</h1>
 <p><a href="/admin">← Return to admin page</a></p>
+<div id="saved-banner" class="alert alert-success hidden mb-4">
+    Configuration saved. Restart the server to apply changes.
+</div>
 
 <p>This is the configuration manager for the wiki. Make sure to click SAVE at the bottom so your changes are saved. You can hover over each fields to get a </p>
 
@@ -50,19 +53,71 @@
 const form = document.getElementById('config-form');
 const toast = document.getElementById('unsaved-toast');
 const scrollBtn = document.getElementById('scroll-bottom-btn');
+const savedBanner = document.getElementById('saved-banner');
 
-const initialState = new URLSearchParams(new FormData(form)).toString();
+const fields = {};     // name -> element (real control, not hidden)
+const original = {};   // name -> original value
+const touched = new Set();
 
-function checkDirty() {
-  const currentState = new URLSearchParams(new FormData(form)).toString();
-  toast.classList.toggle('hidden', currentState === initialState);
+function currentValue(el) {
+  if (el.type === 'checkbox') return el.checked;
+  if (el.type === 'number') return el.value === '' ? undefined : Number(el.value);
+  if (el.tagName === 'TEXTAREA') return el.value.split(',').map(s => s.trim()).filter(s => s !== '');
+  return el.value;
 }
 
-form.addEventListener('input', checkDirty);
-form.addEventListener('change', checkDirty);
-form.addEventListener('submit', () => toast.classList.add('hidden'));
+form.querySelectorAll('input, textarea').forEach(el => {
+  if (el.type === 'hidden') return;
+  fields[el.name] = el;
+  original[el.name] = currentValue(el);
+});
 
-scrollBtn.addEventListener('click', () => {
-    window.scrollTo(0, document.body.scrollHeight);
+function isDirty() {
+  for (const name of touched) {
+    const el = fields[name];
+    if (el && currentValue(el) !== original[name]) return true;
+  }
+  return false;
+}
+
+function updateToast() {
+  toast.classList.toggle('hidden', !isDirty());
+}
+
+form.addEventListener('input', e => { if (e.target.name) { touched.add(e.target.name); updateToast(); } });
+form.addEventListener('change', e => { if (e.target.name) { touched.add(e.target.name); updateToast(); } });
+
+scrollBtn.addEventListener('click', () => window.scrollTo(0, document.body.scrollHeight));
+
+form.addEventListener('submit', async e => {
+  e.preventDefault();
+  const changed = {};
+  for (const name of touched) {
+    const el = fields[name];
+    if (!el || currentValue(el) === original[name]) continue;
+    const dot = name.indexOf('.');
+    if (dot === -1) continue;
+    const section = name.slice(0, dot);
+    const field = name.slice(dot + 1);
+    (changed[section] = changed[section] || {})[field] = currentValue(el);
+  }
+  if (Object.keys(changed).length === 0) { toast.classList.add('hidden'); return; }
+  const res = await fetch('/api/admin/config', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(changed),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (savedBanner) savedBanner.classList.remove('hidden');
+  if (data.success) {
+    toast.classList.add('hidden');
+    if (data.message) savedBanner.textContent = data.message;
+    savedBanner.classList.replace('alert-error', 'alert-success');
+  } else {
+    savedBanner.classList.remove('hidden');
+    if (data.errors) savedBanner.textContent = data.errors.join('; ');
+    savedBanner.classList.remove('alert-success');
+    savedBanner.classList.add('alert-error');
+  }
 });
 </script>
